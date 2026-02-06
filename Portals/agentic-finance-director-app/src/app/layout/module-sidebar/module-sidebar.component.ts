@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 export interface SidebarItem {
   route: string;
@@ -15,7 +16,7 @@ export interface SidebarSection {
 @Component({
   selector: 'afda-module-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
     <aside class="afda-module-sidebar">
       @for (section of sections; track section.heading; let idx = $index) {
@@ -35,6 +36,16 @@ export interface SidebarSection {
           </a>
         }
       }
+
+      <!-- Engine Status (footer) -->
+      <div class="sidebar-engine-card">
+        <div class="sidebar-engine-label">Active Engine</div>
+        <div class="sidebar-engine-row">
+          <div class="sidebar-engine-dot"></div>
+          <span class="sidebar-engine-name">n8n Workflow Engine</span>
+        </div>
+        <div class="sidebar-engine-meta">3 active workflows · 142 runs today</div>
+      </div>
     </aside>
   `
 })
