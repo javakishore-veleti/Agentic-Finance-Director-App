@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-
+from typing import Any
 
 class NotFoundException(HTTPException):
     def __init__(self, entity: str = "Resource", id: Any = None):

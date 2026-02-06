@@ -27,11 +27,15 @@ class Settings(BaseSettings):
     MONGO_HOST: str = "localhost"
     MONGO_PORT: int = 27017
     MONGO_DB: str = "afda_docs"
+    MONGO_USER: str = "afda_user"
+    MONGO_PASSWORD: str = "afda_pass"
 
     @property
     def MONGO_URL(self) -> str:
+        if self.MONGO_USER and self.MONGO_PASSWORD:
+            return f"mongodb://{self.MONGO_USER}:{self.MONGO_PASSWORD}@{self.MONGO_HOST}:{self.MONGO_PORT}"
         return f"mongodb://{self.MONGO_HOST}:{self.MONGO_PORT}"
-
+    
     # Redis
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379

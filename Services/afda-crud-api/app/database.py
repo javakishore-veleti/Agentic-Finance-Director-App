@@ -46,7 +46,14 @@ async def connect_all():
     mongo_client = AsyncIOMotorClient(settings.MONGO_URL)
     mongo_db = mongo_client[settings.MONGO_DB]
     redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
-
+    # Ensure indexes (graceful — don't block startup if DB is unavailable)
+    try:
+        await mongo_db.agent_conversations.create_index("session_id")
+        await mongo_db.agent_executions.create_index([("created_at", -1)])
+        await mongo_db.workflow_definitions.create_index("name")
+    except Exception as e:
+        import logging
+        logging.getLogger("afda-gateway").warning(f"MongoDB index creation skipped: {e}")
 
 async def disconnect_all():
     global mongo_client, redis_client
