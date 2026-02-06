@@ -13,7 +13,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.config import get_settings
 from app.database import engine, AsyncSessionLocal, connect_all, disconnect_all, Base, get_mongo
+import bcrypt
 
+class SimplePwd:
+    def hash(self, password: str) -> str:
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 async def seed_postgres():
     from app.modules.command_center.models import KpiDefinition, KpiStatus, ActionItem, ActionItemStatus, ActionItemPriority, ExecutiveBriefing
@@ -23,9 +27,10 @@ async def seed_postgres():
     from app.modules.risk.models import Alert, AlertSeverity, AlertStatus, AlertCategory, AlertRule, RiskScore
     from app.modules.monitoring.models import ServiceRegistry, ServiceHealth
     from app.modules.admin.models import User, UserStatus, Role, PlatformSetting
-    from passlib.context import CryptContext
+    # from passlib.context import CryptContext
 
-    pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    #pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    pwd = SimplePwd()
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

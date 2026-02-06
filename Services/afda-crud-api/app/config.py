@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "afda_secret"
     POSTGRES_DB: str = "afda_db"
 
+    PG_USER: str = "afda_user"
+    PG_PASSWORD: str = "afda_pass"
+    PG_HOST: str = "localhost"
+    PG_PORT: int = 5432
+    PG_DB: str = "afda_db"
+
     @property
     def DATABASE_URL(self) -> str:
         return (
