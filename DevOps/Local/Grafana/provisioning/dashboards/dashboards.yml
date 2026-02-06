@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: "AFDA Dashboards"
+    orgId: 1
+    folder: "Agentic Finance Director"
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

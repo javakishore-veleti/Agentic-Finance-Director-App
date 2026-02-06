@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: afda-n8n
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      # ─── Auth ────────────────────────────────────────────
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-changeme}
+      # ─── Host ────────────────────────────────────────────
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=America/New_York
+      - N8N_LOG_LEVEL=info
+      # ─── Database backend (Postgres) ────────────────────
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=afda-postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-afda_db}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-afda_user}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-afda_pass}
+      # ─── Metrics (Prometheus scrape) ────────────────────
+      - N8N_METRICS=true
+      - N8N_METRICS_PREFIX=n8n_
+      # ─── LLM Keys ──────────────────────────────────────
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    volumes:
+      - afda_n8n_data:/home/node/.n8n
+    networks:
+      - afda-network
+    depends_on:
+      n8n-wait:
+        condition: service_completed_successfully
+
+  # Sidecar: waits for Postgres to accept connections
+  n8n-wait:
+    image: busybox:latest
+    container_name: afda-n8n-wait
+    command: sh -c "echo 'Waiting 8s for Postgres...' && sleep 8 && echo 'Ready.'"
+    networks:
+      - afda-network
+
+volumes:
+  afda_n8n_data:
+    driver: local
+
+networks:
+  afda-network:
+    external: true
+    name: afda-network

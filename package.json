@@ -1,0 +1,46 @@
+{
+  "name": "agentic-finance-director-app",
+  "version": "0.1.0",
+  "description": "An autonomous AI-powered finance decision engine connecting FP&A, Treasury, and Accounting into one unified system.",
+  "private": true,
+  "license": "MIT",
+  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/<your-username>/Agentic-Finance-Director-App.git"
+  },
+  "scripts": {
+    "---------- DOCKER INFRASTRUCTURE ----------": "",
+    "setup:local-docker-all-start": "bash DevOps/Local/docker-all-start.sh",
+    "setup:local-docker-all-stop": "bash DevOps/Local/docker-all-shutdown.sh",
+    "setup:local-docker-all-status": "bash DevOps/Local/docker-all-status.sh",
+    "setup:local-docker-all-delete": "bash DevOps/Local/docker-all-delete.sh",
+
+    "---------- DEVELOPMENT ----------": "",
+    "dev:dashboard": "cd apps/dashboard && ng serve --open --port 4200",
+    "dev:api": "cd api && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+
+    "---------- DATABASE ----------": "",
+    "db:seed": "bash agents/seed/seed-all.sh",
+    "db:migrate": "bash scripts/db-migrate.sh",
+
+    "---------- AGENTS ----------": "",
+    "agents:export": "bash scripts/agents-export.sh",
+    "agents:import": "bash scripts/agents-import.sh",
+
+    "---------- LOGS & CLEANUP ----------": "",
+    "logs": "docker logs -f afda-n8n afda-api afda-postgres afda-mongodb afda-redis",
+    "logs:n8n": "docker logs -f afda-n8n",
+    "logs:api": "docker logs -f afda-api",
+    "logs:postgres": "docker logs -f afda-postgres",
+    "logs:mongodb": "docker logs -f afda-mongodb",
+    "logs:redis": "docker logs -f afda-redis",
+    "logs:grafana": "docker logs -f afda-grafana",
+    "logs:prometheus": "docker logs -f afda-prometheus",
+    "clean": "docker system prune -f && docker volume prune -f"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

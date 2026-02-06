@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: ../../..
+      dockerfile: DevOps/Local/PythonAPI/Dockerfile
+    container_name: afda-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - API_ENV=${API_ENV:-development}
+      - API_SECRET_KEY=${API_SECRET_KEY:-local-dev-secret}
+      - API_CORS_ORIGINS=${API_CORS_ORIGINS:-http://localhost:4200,http://localhost:5678}
+      # ─── Database connections ───────────────────────────
+      - POSTGRES_HOST=afda-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-afda_db}
+      - POSTGRES_USER=${POSTGRES_USER:-afda_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-afda_pass}
+      - MONGO_HOST=afda-mongodb
+      - MONGO_PORT=27017
+      - MONGO_USER=${MONGO_USER:-afda_user}
+      - MONGO_PASSWORD=${MONGO_PASSWORD:-afda_pass}
+      - MONGO_DB=afda_db
+      - REDIS_HOST=afda-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-afda_redis_pass}
+      # ─── n8n ───────────────────────────────────────────
+      - N8N_BASE_URL=http://afda-n8n:5678
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-changeme}
+    volumes:
+      - ../../../api:/app
+    networks:
+      - afda-network
+    depends_on:
+      api-wait:
+        condition: service_completed_successfully
+
+  # Sidecar: waits for dependent services
+  api-wait:
+    image: busybox:latest
+    container_name: afda-api-wait
+    command: sh -c "echo 'Waiting 12s for databases + n8n...' && sleep 12"
+    networks:
+      - afda-network
+
+networks:
+  afda-network:
+    external: true
+    name: afda-network
