@@ -1,3 +1,16 @@
+#!/bin/bash
+###############################################################################
+# 09_activate_all_routers.sh
+# Replaces main.py with all 7 module routers wired and active
+# Run from: git repo root (Agentic-Finance-Director-App/)
+###############################################################################
+set -e
+
+MAIN="Services/afda-crud-api/main.py"
+
+echo "🔧 [09] Activating all routers in main.py..."
+
+cat > "$MAIN" << 'PYEOF'
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -78,3 +91,24 @@ async def root():
             {"name": "Admin",          "prefix": f"{settings.API_PREFIX}/admin"},
         ],
     }
+PYEOF
+
+echo "✅ [09] main.py updated — all 7 routers active"
+echo ""
+echo "   Endpoints registered:"
+echo "    /api/v1/command-center  — 13 endpoints"
+echo "    /api/v1/fpa             — 17 endpoints"
+echo "    /api/v1/treasury        — 13 endpoints"
+echo "    /api/v1/accounting      — 18 endpoints"
+echo "    /api/v1/risk            — 15 endpoints"
+echo "    /api/v1/monitoring      —  8 endpoints"
+echo "    /api/v1/admin           — 18 endpoints"
+echo "    ─────────────────────────────────"
+echo "    TOTAL                    102 endpoints"
+echo ""
+echo "   GET /       → service info + module index"
+echo "   GET /health → health check"
+echo "   GET /docs   → Swagger UI"
+echo "   GET /redoc  → ReDoc"
+echo ""
+echo "   Next: Run 10_agent_gateway_foundation.sh"
