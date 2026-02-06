@@ -15,6 +15,7 @@ from app.modules.accounting.router import router as accounting_router
 from app.modules.risk.router import router as risk_router
 from app.modules.monitoring.router import router as monitoring_router
 from app.modules.admin.router import router as admin_router
+from app.modules.auth.router import router as auth_router
 
 settings = get_settings()
 
@@ -48,6 +49,7 @@ app.add_middleware(ErrorHandlerMiddleware)
 Instrumentator().instrument(app).expose(app)
 
 # ── Register All Routers ──
+app.include_router(auth_router,     prefix=f"{settings.API_PREFIX}/auth",           tags=["Authentication"])
 app.include_router(cc_router,        prefix=f"{settings.API_PREFIX}/command-center", tags=["Command Center"])
 app.include_router(fpa_router,       prefix=f"{settings.API_PREFIX}/fpa",            tags=["FP&A"])
 app.include_router(treasury_router,  prefix=f"{settings.API_PREFIX}/treasury",       tags=["Treasury"])
@@ -55,7 +57,6 @@ app.include_router(accounting_router,prefix=f"{settings.API_PREFIX}/accounting",
 app.include_router(risk_router,      prefix=f"{settings.API_PREFIX}/risk",           tags=["Risk Intelligence"])
 app.include_router(monitoring_router,prefix=f"{settings.API_PREFIX}/monitoring",     tags=["Monitoring"])
 app.include_router(admin_router,     prefix=f"{settings.API_PREFIX}/admin",          tags=["Admin"])
-
 
 @app.get("/health", tags=["Health"])
 async def health():
