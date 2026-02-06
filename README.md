@@ -18,6 +18,12 @@ This system replaces hours of cross-functional finance work with an AI agent arc
 
 ![Executive Overview](Docs/README_Images/01_Executive_Overview.png)
 
+![Agent Console](Docs/README_Images/02_Agent_Console.png)
+
+![Budget vs Actual](Docs/README_Images/03_Budget_vs_Actual.png)
+
+![Reports](Docs/README_Images/04_Reports.png)
+
 ---
 
 ## Architecture
