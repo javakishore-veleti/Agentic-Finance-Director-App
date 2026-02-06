@@ -1,22 +1,27 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+import { guestGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   /* ─── Auth (no layout shell) ───────────────────────────── */
   {
     path: 'login',
     loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent),
+    canActivate: [guestGuard],
     title: 'Sign In — Finance Director'
   },
   {
     path: 'signup',
     loadComponent: () => import('./pages/signup/signup.component').then(m => m.SignupComponent),
+    canActivate: [guestGuard],
     title: 'Create Account — Finance Director'
   },
 
-  /* ─── App Shell (navbar + sidebar + router-outlet) ─────── */
+  /* ─── App Shell (protected — requires login) ───────────── */
   {
     path: '',
     loadComponent: () => import('./layout/app-layout/app-layout.component').then(m => m.AppLayoutComponent),
+    canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'command', pathMatch: 'full' },
       {

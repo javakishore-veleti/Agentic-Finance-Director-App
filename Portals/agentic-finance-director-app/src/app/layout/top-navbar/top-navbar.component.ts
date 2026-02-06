@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'afda-top-navbar',
@@ -37,17 +38,20 @@ import { CommonModule } from '@angular/common';
         </button>
         <div class="afda-nav-divider"></div>
         <div class="afda-user-block" (click)="onLogout()">
-          <div class="afda-user-avatar">FD</div>
+          <div class="afda-user-avatar">{{ userInitials() }}</div>
           <div>
-            <div class="afda-user-name">Admin User</div>
-            <div class="afda-user-role">Finance Director</div>
+            <div class="afda-user-name">{{ auth.user()?.full_name || 'Guest' }}</div>
+            <div class="afda-user-role">{{ auth.user()?.role || 'Not signed in' }}</div>
           </div>
+          <i class="bi bi-box-arrow-right" style="margin-left: 8px; color: #94a3b8;"></i>
         </div>
       </div>
     </nav>
   `
 })
 export class TopNavbarComponent {
+  auth = inject(AuthService);
+
   modules = [
     { route: '/command',       label: 'Command Center', icon: 'bi-lightning-fill' },
     { route: '/fpa',           label: 'FP&A',           icon: 'bi-bar-chart-fill' },
@@ -59,9 +63,13 @@ export class TopNavbarComponent {
     { route: '/admin',         label: 'Admin',          icon: 'bi-gear-fill' },
   ];
 
-  constructor(private router: Router) {}
+  userInitials(): string {
+    const name = this.auth.user()?.full_name;
+    if (!name) return '?';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }
 
   onLogout() {
-    this.router.navigate(['/login']);
+    this.auth.logout();
   }
 }
