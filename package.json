@@ -7,7 +7,7 @@
   "author": "",
   "repository": {
     "type": "git",
-    "url": "https://github.com/<your-username>/Agentic-Finance-Director-App.git"
+    "url": "https://github.com/javakishore-veleti/Agentic-Finance-Director-App.git"
   },
   "scripts": {
     "---------- DOCKER INFRASTRUCTURE ----------": "",
@@ -16,12 +16,18 @@
     "setup:local-docker-all-status": "bash DevOps/Local/docker-all-status.sh",
     "setup:local-docker-all-delete": "bash DevOps/Local/docker-all-delete.sh",
 
-    "---------- DEVELOPMENT ----------": "",
-    "dev:dashboard": "cd apps/dashboard && ng serve --open --port 4200",
-    "dev:api": "cd api && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "---------- PORTAL (Angular) ----------": "",
+    "portal:install": "cd Portals/agentic-finance-director-app && npm install",
+    "portal:start": "cd Portals/agentic-finance-director-app && npx ng serve --open --port 4200",
+    "portal:build": "cd Portals/agentic-finance-director-app && npx ng build --configuration production",
+    "portal:build:dev": "cd Portals/agentic-finance-director-app && npx ng build --configuration development",
+
+    "---------- SERVICES (Python) ----------": "",
+    "dev:flask": "cd Services/flask-crud-api && flask run --host 0.0.0.0 --port 8000 --reload",
+    "dev:fastapi": "cd Services/fastapi-agent-gateway && uvicorn main:app --reload --host 0.0.0.0 --port 8001",
 
     "---------- DATABASE ----------": "",
-    "db:seed": "bash agents/seed/seed-all.sh",
+    "db:seed": "bash Agents/seed/seed-all.sh",
     "db:migrate": "bash scripts/db-migrate.sh",
 
     "---------- AGENTS ----------": "",
@@ -29,9 +35,10 @@
     "agents:import": "bash scripts/agents-import.sh",
 
     "---------- LOGS & CLEANUP ----------": "",
-    "logs": "docker logs -f afda-n8n afda-api afda-postgres afda-mongodb afda-redis",
+    "logs": "docker logs -f afda-n8n afda-flask-api afda-agent-gw afda-postgres afda-mongodb afda-redis",
     "logs:n8n": "docker logs -f afda-n8n",
-    "logs:api": "docker logs -f afda-api",
+    "logs:flask": "docker logs -f afda-flask-api",
+    "logs:fastapi": "docker logs -f afda-agent-gw",
     "logs:postgres": "docker logs -f afda-postgres",
     "logs:mongodb": "docker logs -f afda-mongodb",
     "logs:redis": "docker logs -f afda-redis",
