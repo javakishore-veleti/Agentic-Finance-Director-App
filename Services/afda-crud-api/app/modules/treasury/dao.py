@@ -9,8 +9,9 @@ from app.modules.treasury.models import (
 
 
 class BankAccountDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, status: Optional[str] = None) -> List[BankAccount]:
         q = select(BankAccount)
@@ -37,8 +38,9 @@ class BankAccountDAO:
 
 
 class CashPositionDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_current(self) -> Optional[CashPosition]:
         result = await self.db.execute(
@@ -54,8 +56,9 @@ class CashPositionDAO:
 
 
 class CashForecastDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_forecast(self, scenario: str = "base", days: int = 90) -> List[CashForecast]:
         result = await self.db.execute(
@@ -75,8 +78,9 @@ class CashForecastDAO:
 
 
 class ArInvoiceDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, status: Optional[str] = None, limit: int = 100, offset: int = 0) -> List[ArInvoice]:
         q = select(ArInvoice)

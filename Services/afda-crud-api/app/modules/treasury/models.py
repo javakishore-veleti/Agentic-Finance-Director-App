@@ -25,6 +25,7 @@ class BankAccount(Base):
     __tablename__ = "bank_accounts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     bank_name: Mapped[str] = mapped_column(String(200), nullable=False)
     account_name: Mapped[str] = mapped_column(String(200), nullable=False)
     account_number_masked: Mapped[str] = mapped_column(String(20), nullable=False)  # ****1234
@@ -44,6 +45,7 @@ class CashPosition(Base):
     __tablename__ = "cash_positions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     snapshot_date: Mapped[date] = mapped_column(Date, nullable=False)
     total_cash: Mapped[float] = mapped_column(Float, default=0.0)
     total_investments: Mapped[float] = mapped_column(Float, default=0.0)
@@ -57,6 +59,7 @@ class CashTransaction(Base):
     __tablename__ = "cash_transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bank_accounts.id"))
     transaction_date: Mapped[date] = mapped_column(Date, nullable=False)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
@@ -73,6 +76,7 @@ class CashForecast(Base):
     __tablename__ = "cash_forecasts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     forecast_date: Mapped[date] = mapped_column(Date, nullable=False)
     projected_inflow: Mapped[float] = mapped_column(Float, default=0.0)
     projected_outflow: Mapped[float] = mapped_column(Float, default=0.0)
@@ -87,6 +91,7 @@ class ArInvoice(Base):
     __tablename__ = "ar_invoices"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     invoice_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     customer_name: Mapped[str] = mapped_column(String(200), nullable=False)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
@@ -104,6 +109,7 @@ class LiquidityMetric(Base):
     __tablename__ = "liquidity_metrics"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     metric_date: Mapped[date] = mapped_column(Date, nullable=False)
     current_ratio: Mapped[float] = mapped_column(Float, nullable=True)
     quick_ratio: Mapped[float] = mapped_column(Float, nullable=True)

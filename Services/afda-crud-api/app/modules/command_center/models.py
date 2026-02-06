@@ -31,6 +31,7 @@ class KpiDefinition(Base):
     __tablename__ = "kpi_definitions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     category: Mapped[str] = mapped_column(String(100), nullable=False)  # revenue, cost, margin, liquidity
     unit: Mapped[str] = mapped_column(String(50), default="%")  # %, $, ratio, count
@@ -50,6 +51,7 @@ class KpiValue(Base):
     __tablename__ = "kpi_values"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     kpi_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("kpi_definitions.id"))
     value: Mapped[float] = mapped_column(Float, nullable=False)
     period: Mapped[str] = mapped_column(String(20), nullable=False)  # 2025-Q1, 2025-01
@@ -62,6 +64,7 @@ class ExecutiveBriefing(Base):
     __tablename__ = "executive_briefings"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     key_insights: Mapped[str] = mapped_column(Text, nullable=True)  # JSON array stored as text
@@ -76,6 +79,7 @@ class ActionItem(Base):
     __tablename__ = "action_items"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     status: Mapped[ActionItemStatus] = mapped_column(SAEnum(ActionItemStatus), default=ActionItemStatus.OPEN)

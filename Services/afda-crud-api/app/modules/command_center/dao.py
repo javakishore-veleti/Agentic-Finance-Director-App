@@ -9,8 +9,9 @@ from app.modules.command_center.models import (
 
 
 class KpiDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, is_active: Optional[bool] = True) -> List[KpiDefinition]:
         q = select(KpiDefinition)
@@ -43,8 +44,9 @@ class KpiDAO:
 
 
 class BriefingDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, limit: int = 20) -> List[ExecutiveBriefing]:
         result = await self.db.execute(
@@ -71,8 +73,9 @@ class BriefingDAO:
 
 
 class ActionItemDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, status: Optional[str] = None, priority: Optional[str] = None,
                       limit: int = 50, offset: int = 0) -> List[ActionItem]:

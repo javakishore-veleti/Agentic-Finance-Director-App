@@ -1,4 +1,10 @@
 {
+  "/api/v1/platform": {
+    "target": "http://localhost:8002",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  },
   "/api/v1/agent": {
     "target": "http://localhost:8001",
     "secure": false,

@@ -9,8 +9,9 @@ from app.modules.fpa.models import (
 
 
 class BudgetDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, fiscal_year: Optional[int] = None, department: Optional[str] = None,
                       limit: int = 50, offset: int = 0) -> List[Budget]:
@@ -49,8 +50,9 @@ class BudgetDAO:
 
 
 class VarianceDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, period: Optional[str] = None, department: Optional[str] = None) -> List[VarianceRecord]:
         q = select(VarianceRecord)
@@ -88,8 +90,9 @@ class VarianceDAO:
 
 
 class FluxDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, period: Optional[str] = None, limit: int = 50) -> List[FluxCommentary]:
         q = select(FluxCommentary)
@@ -107,8 +110,9 @@ class FluxDAO:
 
 
 class ForecastDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, fiscal_year: Optional[int] = None, forecast_type: Optional[str] = None) -> List[Forecast]:
         q = select(Forecast)

@@ -7,8 +7,9 @@ from app.modules.monitoring.models import ServiceRegistry, Incident, ApiMetricsL
 
 
 class ServiceRegistryDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self) -> List[ServiceRegistry]:
         result = await self.db.execute(select(ServiceRegistry).order_by(ServiceRegistry.service_name))
@@ -39,8 +40,9 @@ class ServiceRegistryDAO:
 
 
 class IncidentDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_active(self) -> List[Incident]:
         result = await self.db.execute(
@@ -58,8 +60,9 @@ class IncidentDAO:
 
 
 class ApiMetricsDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_recent(self, limit: int = 100) -> List[ApiMetricsLog]:
         result = await self.db.execute(

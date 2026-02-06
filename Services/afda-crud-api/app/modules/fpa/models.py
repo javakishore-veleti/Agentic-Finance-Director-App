@@ -18,6 +18,7 @@ class Budget(Base):
     __tablename__ = "budgets"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     fiscal_year: Mapped[int] = mapped_column(Integer, nullable=False)
     department: Mapped[str] = mapped_column(String(100), nullable=True)
@@ -35,6 +36,7 @@ class BudgetLineItem(Base):
     __tablename__ = "budget_line_items"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     budget_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("budgets.id"))
     account_code: Mapped[str] = mapped_column(String(50), nullable=False)
     account_name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -59,6 +61,7 @@ class VarianceRecord(Base):
     __tablename__ = "variance_records"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     period: Mapped[str] = mapped_column(String(20), nullable=False)
     department: Mapped[str] = mapped_column(String(100), nullable=False)
     account_code: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -75,6 +78,7 @@ class FluxCommentary(Base):
     __tablename__ = "flux_commentaries"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     period: Mapped[str] = mapped_column(String(20), nullable=False)
     comparison_period: Mapped[str] = mapped_column(String(20), nullable=False)
     account_code: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -92,6 +96,7 @@ class Forecast(Base):
     __tablename__ = "forecasts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     forecast_type: Mapped[str] = mapped_column(String(50), nullable=False)  # revenue, expense, cash_flow
     scenario: Mapped[str] = mapped_column(String(50), default="base")  # base, optimistic, pessimistic
@@ -108,6 +113,7 @@ class FpaReport(Base):
     __tablename__ = "fpa_reports"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     report_type: Mapped[str] = mapped_column(String(50), nullable=False)  # monthly, quarterly, annual, ad_hoc
     period: Mapped[str] = mapped_column(String(20), nullable=False)

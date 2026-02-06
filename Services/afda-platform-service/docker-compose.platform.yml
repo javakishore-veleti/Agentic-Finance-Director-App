@@ -1,0 +1,43 @@
+# Platform service addition — merge with root docker-compose.yml
+# Usage: docker compose -f docker-compose.yml -f Services/afda-platform-service/docker-compose.platform.yml up
+version: "3.9"
+
+services:
+  afda-platform-db:
+    image: postgres:16-alpine
+    container_name: afda-platform-db
+    environment:
+      POSTGRES_USER: afda_platform
+      POSTGRES_PASSWORD: platform_secret
+      POSTGRES_DB: afda_platform_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - platform_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afda_platform -d afda_platform_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  afda-platform-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: afda-platform-service
+    ports:
+      - "8002:8002"
+    environment:
+      - POSTGRES_HOST=afda-platform-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=afda_platform
+      - POSTGRES_PASSWORD=platform_secret
+      - POSTGRES_DB=afda_platform_db
+    depends_on:
+      afda-platform-db:
+        condition: service_healthy
+    volumes:
+      - ./app:/code/app
+
+volumes:
+  platform_pgdata:

@@ -6,8 +6,9 @@ from app.modules.risk.models import Alert, AlertRule, RiskScore, AlertHistory, A
 
 
 class AlertDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, severity: Optional[str] = None, status: Optional[str] = None,
                       category: Optional[str] = None, limit: int = 50, offset: int = 0) -> List[Alert]:
@@ -47,8 +48,9 @@ class AlertDAO:
 
 
 class AlertRuleDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, is_active: Optional[bool] = None) -> List[AlertRule]:
         q = select(AlertRule)
@@ -80,8 +82,9 @@ class AlertRuleDAO:
 
 
 class RiskScoreDAO:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, org_id=None):
         self.db = db
+        self.org_id = org_id
 
     async def get_all(self, entity_type: Optional[str] = None) -> List[RiskScore]:
         q = select(RiskScore)

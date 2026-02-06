@@ -19,6 +19,7 @@ class ChartOfAccount(Base):
     __tablename__ = "chart_of_accounts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     account_code: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     account_name: Mapped[str] = mapped_column(String(200), nullable=False)
     category: Mapped[AccountCategory] = mapped_column(SAEnum(AccountCategory), nullable=False)
@@ -37,6 +38,7 @@ class JournalEntry(Base):
     __tablename__ = "journal_entries"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     entry_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     entry_date: Mapped[date] = mapped_column(Date, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
@@ -53,6 +55,7 @@ class JournalLine(Base):
     __tablename__ = "journal_lines"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     entry_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("journal_entries.id"))
     account_code: Mapped[str] = mapped_column(String(20), nullable=False)
     account_name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -67,6 +70,7 @@ class TrialBalance(Base):
     __tablename__ = "trial_balances"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     period: Mapped[str] = mapped_column(String(20), nullable=False)
     account_code: Mapped[str] = mapped_column(String(20), nullable=False)
     account_name: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -81,6 +85,7 @@ class IntercompanyTransaction(Base):
     __tablename__ = "intercompany_transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     transaction_date: Mapped[date] = mapped_column(Date, nullable=False)
     from_entity: Mapped[str] = mapped_column(String(100), nullable=False)
     to_entity: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -103,6 +108,7 @@ class Reconciliation(Base):
     __tablename__ = "reconciliations"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     account_code: Mapped[str] = mapped_column(String(20), nullable=False)
     period: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -122,6 +128,7 @@ class ReconItem(Base):
     __tablename__ = "recon_items"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     reconciliation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("reconciliations.id"))
     source_ref: Mapped[str] = mapped_column(String(100), nullable=True)
     target_ref: Mapped[str] = mapped_column(String(100), nullable=True)
@@ -145,6 +152,7 @@ class ClosePeriod(Base):
     __tablename__ = "close_periods"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     period: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
     fiscal_year: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[CloseStatus] = mapped_column(SAEnum(CloseStatus), default=CloseStatus.OPEN)
@@ -159,6 +167,7 @@ class CloseTask(Base):
     __tablename__ = "close_tasks"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     period_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("close_periods.id"))
     task_name: Mapped[str] = mapped_column(String(300), nullable=False)
     category: Mapped[str] = mapped_column(String(100), nullable=True)  # journal, recon, review, approval

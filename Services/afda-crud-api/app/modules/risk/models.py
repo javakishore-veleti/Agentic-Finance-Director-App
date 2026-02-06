@@ -34,6 +34,7 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     severity: Mapped[AlertSeverity] = mapped_column(SAEnum(AlertSeverity), default=AlertSeverity.MEDIUM)
@@ -56,6 +57,7 @@ class AlertRule(Base):
     __tablename__ = "alert_rules"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     category: Mapped[AlertCategory] = mapped_column(SAEnum(AlertCategory), default=AlertCategory.FINANCIAL)
@@ -75,6 +77,7 @@ class RiskScore(Base):
     __tablename__ = "risk_scores"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     entity_type: Mapped[str] = mapped_column(String(50), nullable=False)  # department, vendor, process, portfolio
     entity_name: Mapped[str] = mapped_column(String(200), nullable=False)
     overall_score: Mapped[float] = mapped_column(Float, nullable=False)  # 0-100
@@ -91,6 +94,7 @@ class AlertHistory(Base):
     __tablename__ = "alert_history"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     alert_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     action: Mapped[str] = mapped_column(String(50), nullable=False)  # created, acknowledged, escalated, resolved
     performed_by: Mapped[str] = mapped_column(String(200), nullable=True)
