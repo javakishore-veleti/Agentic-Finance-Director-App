@@ -1,6 +1,6 @@
 {
   "name": "agentic-finance-director-app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An autonomous AI-powered finance decision engine connecting FP&A, Treasury, and Accounting into one unified system.",
   "private": true,
   "license": "MIT",
@@ -16,38 +16,73 @@
     "setup:local-docker-all-status": "bash DevOps/Local/docker-all-status.sh",
     "setup:local-docker-all-delete": "bash DevOps/Local/docker-all-delete.sh",
 
-    "---------- PORTAL (Angular) ----------": "",
+    "---------- PORTAL (Angular 18) ----------": "",
     "portal:install": "cd Portals/agentic-finance-director-app && npm install",
     "portal:start": "cd Portals/agentic-finance-director-app && npx ng serve --open --port 4200",
     "portal:build": "cd Portals/agentic-finance-director-app && npx ng build --configuration production",
     "portal:build:dev": "cd Portals/agentic-finance-director-app && npx ng build --configuration development",
 
-    "---------- SERVICES (Python) ----------": "",
-    "dev:flask": "cd Services/flask-crud-api && flask run --host 0.0.0.0 --port 8000 --reload",
-    "dev:fastapi": "cd Services/fastapi-agent-gateway && uvicorn main:app --reload --host 0.0.0.0 --port 8001",
+    "---------- BACKEND SCAFFOLD ----------": "",
+    "backend:scaffold": "bash Project_Setup/Scripts/Backend/Services/12_run_all.sh",
+    "backend:scaffold:crud": "bash Project_Setup/Scripts/Backend/Services/01_crud_api_foundation.sh && bash Project_Setup/Scripts/Backend/Services/02_command_center_module.sh && bash Project_Setup/Scripts/Backend/Services/03_fpa_module.sh && bash Project_Setup/Scripts/Backend/Services/04_treasury_module.sh && bash Project_Setup/Scripts/Backend/Services/05_accounting_module.sh && bash Project_Setup/Scripts/Backend/Services/06_risk_module.sh && bash Project_Setup/Scripts/Backend/Services/07_monitoring_module.sh && bash Project_Setup/Scripts/Backend/Services/08_admin_module.sh && bash Project_Setup/Scripts/Backend/Services/09_activate_all_routers.sh",
+    "backend:scaffold:gateway": "bash Project_Setup/Scripts/Backend/Services/10_agent_gateway_foundation.sh",
+    "backend:scaffold:db": "bash Project_Setup/Scripts/Backend/Services/11_database_setup.sh",
+
+    "---------- SERVICES (Python FastAPI) ----------": "",
+    "dev:crud-api": "cd Services/afda-crud-api && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:agent-gateway": "cd Services/afda-agent-gateway && uvicorn main:app --reload --host 0.0.0.0 --port 8001",
+    "dev:backend": "concurrently \"npm run dev:crud-api\" \"npm run dev:agent-gateway\"",
+    "dev:all": "concurrently \"npm run dev:crud-api\" \"npm run dev:agent-gateway\" \"npm run portal:start\"",
+
+    "install:crud-api": "cd Services/afda-crud-api && pip install -r requirements.txt",
+    "install:agent-gateway": "cd Services/afda-agent-gateway && pip install -r requirements.txt",
+    "install:backend": "npm run install:crud-api && npm run install:agent-gateway",
+    "install:all": "npm run portal:install && npm run install:backend",
 
     "---------- DATABASE ----------": "",
-    "db:seed": "bash Agents/seed/seed-all.sh",
-    "db:migrate": "bash scripts/db-migrate.sh",
+    "db:create": "cd Services/afda-crud-api && python -m scripts.create_tables",
+    "db:seed": "cd Services/afda-crud-api && python -m scripts.seed_data",
+    "db:drop": "cd Services/afda-crud-api && python -m scripts.drop_tables",
+    "db:reset": "npm run db:drop && npm run db:create && npm run db:seed",
+    "db:migrate:generate": "cd Services/afda-crud-api && alembic revision --autogenerate -m",
+    "db:migrate:up": "cd Services/afda-crud-api && alembic upgrade head",
+    "db:migrate:down": "cd Services/afda-crud-api && alembic downgrade -1",
 
     "---------- AGENTS ----------": "",
     "agents:export": "bash scripts/agents-export.sh",
     "agents:import": "bash scripts/agents-import.sh",
 
-    "---------- LOGS & CLEANUP ----------": "",
-    "logs": "docker logs -f afda-n8n afda-flask-api afda-agent-gw afda-postgres afda-mongodb afda-redis",
+    "---------- SWAGGER / DOCS ----------": "",
+    "docs:crud-api": "open http://localhost:8000/docs || xdg-open http://localhost:8000/docs 2>/dev/null || echo 'Open http://localhost:8000/docs'",
+    "docs:agent-gateway": "open http://localhost:8001/docs || xdg-open http://localhost:8001/docs 2>/dev/null || echo 'Open http://localhost:8001/docs'",
+    "docs:all": "npm run docs:crud-api && npm run docs:agent-gateway",
+
+    "---------- HEALTH CHECKS ----------": "",
+    "health:crud-api": "curl -s http://localhost:8000/health | python3 -m json.tool",
+    "health:agent-gateway": "curl -s http://localhost:8001/api/v1/agents/health | python3 -m json.tool",
+    "health:all": "npm run health:crud-api && npm run health:agent-gateway",
+
+    "---------- LOGS ----------": "",
+    "logs": "docker logs -f afda-crud-api afda-agent-gw afda-n8n afda-postgres afda-mongodb afda-redis",
+    "logs:crud-api": "docker logs -f afda-crud-api",
+    "logs:agent-gw": "docker logs -f afda-agent-gw",
     "logs:n8n": "docker logs -f afda-n8n",
-    "logs:flask": "docker logs -f afda-flask-api",
-    "logs:fastapi": "docker logs -f afda-agent-gw",
     "logs:postgres": "docker logs -f afda-postgres",
     "logs:mongodb": "docker logs -f afda-mongodb",
     "logs:redis": "docker logs -f afda-redis",
     "logs:grafana": "docker logs -f afda-grafana",
     "logs:prometheus": "docker logs -f afda-prometheus",
-    "clean": "docker system prune -f && docker volume prune -f"
+
+    "---------- CLEANUP ----------": "",
+    "clean": "docker system prune -f && docker volume prune -f",
+    "clean:pyc": "find Services/ -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; echo 'Cleaned'",
+    "clean:all": "npm run clean && npm run clean:pyc"
   },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
   }
 }
