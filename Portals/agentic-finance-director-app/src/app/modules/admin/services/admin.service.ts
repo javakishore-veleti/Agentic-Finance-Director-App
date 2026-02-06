@@ -2,77 +2,86 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 
-// ── DTOs ──
-export interface User {
+// ── DTOs (matching backend exactly) ──
+export interface UserOut {
   id: string;
   email: string;
-  full_name: string;
-  role_id: string;
-  role_name: string;
+  display_name: string;
   status: string;
+  department: string | null;
   last_login_at: string | null;
   created_at: string;
 }
 
-export interface Role {
+export interface RoleOut {
   id: string;
   name: string;
-  description: string;
-  permissions: string[];
-  user_count: number;
+  description: string | null;
+  permissions: Record<string, any>;
   is_system: boolean;
   created_at: string;
 }
 
-export interface ApiKey {
+export interface ApiKeyOut {
   id: string;
   name: string;
   key_prefix: string;
   scopes: string[];
-  status: string;
+  is_active: boolean;
   expires_at: string | null;
   last_used_at: string | null;
-  usage_count: number;
-  rate_limit_rpm: number;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
 }
 
-export interface DataConnection {
+export interface ApiKeyCreatedOut {
+  id: string;
+  name: string;
+  key: string;          // only shown once
+  key_prefix: string;
+  scopes: string[];
+  expires_at: string | null;
+  created_at: string;
+}
+
+export interface DataConnectionOut {
   id: string;
   name: string;
   connection_type: string;
+  provider: string | null;
   status: string;
-  endpoint_url: string;
   last_sync_at: string | null;
+  last_error: string | null;
   sync_frequency: string;
-  records_synced: number;
-  health_status: string;
-  config: Record<string, any>;
   created_at: string;
 }
 
-export interface AuditLogEntry {
-  id: string;
-  user_id: string;
-  user_email: string;
-  action: string;
-  resource_type: string;
-  resource_id: string;
-  details: Record<string, any>;
-  ip_address: string;
-  user_agent: string;
-  timestamp: string;
+export interface ConnectionTestResult {
+  connection_id: string;
+  success: boolean;
+  latency_ms: number | null;
+  message: string;
 }
 
-export interface PlatformSettings {
-  id: string;
-  category: string;
+export interface SettingOut {
   key: string;
-  value: any;
-  description: string;
-  updated_by: string;
+  value: string;
+  category: string;
+  description: string | null;
+  updated_by: string | null;
   updated_at: string;
+}
+
+export interface AuditLogOut {
+  id: string;
+  user_id: string | null;
+  user_email: string | null;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  details: Record<string, any> | null;
+  ip_address: string | null;
+  created_at: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -82,88 +91,78 @@ export class AdminService {
   constructor(private api: ApiService) {}
 
   // ── Users ──
-  getUsers(status?: string, role?: string): Observable<User[]> {
+  getUsers(status?: string): Observable<UserOut[]> {
     const params: any = {};
     if (status) params.status = status;
-    if (role) params.role = role;
-    return this.api.get<User[]>(`${this.prefix}/users`, params);
+    return this.api.get<UserOut[]>(`${this.prefix}/users`, params);
   }
 
-  getUser(id: string): Observable<User> {
-    return this.api.get<User>(`${this.prefix}/users/${id}`);
+  createUser(data: { email: string; display_name: string; password: string; department?: string; role_ids?: string[] }): Observable<UserOut> {
+    return this.api.post<UserOut>(`${this.prefix}/users`, data);
   }
 
-  createUser(data: Partial<User> & { password: string }): Observable<User> {
-    return this.api.post<User>(`${this.prefix}/users`, data);
+  updateUser(id: string, data: Partial<{ display_name: string; department: string; status: string }>): Observable<UserOut> {
+    return this.api.put<UserOut>(`${this.prefix}/users/${id}`, data);
   }
 
-  updateUser(id: string, data: Partial<User>): Observable<User> {
-    return this.api.put<User>(`${this.prefix}/users/${id}`, data);
+  deactivateUser(id: string): Observable<any> {
+    return this.api.delete<any>(`${this.prefix}/users/${id}`);
   }
 
   // ── Roles ──
-  getRoles(): Observable<Role[]> {
-    return this.api.get<Role[]>(`${this.prefix}/roles`);
+  getRoles(): Observable<RoleOut[]> {
+    return this.api.get<RoleOut[]>(`${this.prefix}/roles`);
   }
 
-  getRole(id: string): Observable<Role> {
-    return this.api.get<Role>(`${this.prefix}/roles/${id}`);
+  createRole(data: { name: string; description?: string; permissions?: Record<string, string[]> }): Observable<RoleOut> {
+    return this.api.post<RoleOut>(`${this.prefix}/roles`, data);
+  }
+
+  updateRole(id: string, data: Partial<{ description: string; permissions: Record<string, string[]> }>): Observable<RoleOut> {
+    return this.api.put<RoleOut>(`${this.prefix}/roles/${id}`, data);
   }
 
   // ── API Keys ──
-  getApiKeys(): Observable<ApiKey[]> {
-    return this.api.get<ApiKey[]>(`${this.prefix}/api-keys`);
+  getApiKeys(): Observable<ApiKeyOut[]> {
+    return this.api.get<ApiKeyOut[]>(`${this.prefix}/api-keys`);
   }
 
-  createApiKey(data: { name: string; scopes: string[]; expires_in_days?: number }): Observable<ApiKey & { full_key: string }> {
-    return this.api.post<ApiKey & { full_key: string }>(`${this.prefix}/api-keys`, data);
+  createApiKey(data: { name: string; scopes: string[]; expires_in_days?: number }): Observable<ApiKeyCreatedOut> {
+    return this.api.post<ApiKeyCreatedOut>(`${this.prefix}/api-keys`, data);
   }
 
-  revokeApiKey(id: string): Observable<void> {
-    return this.api.delete<void>(`${this.prefix}/api-keys/${id}`);
-  }
-
-  rotateApiKey(id: string): Observable<ApiKey & { full_key: string }> {
-    return this.api.post<ApiKey & { full_key: string }>(`${this.prefix}/api-keys/${id}/rotate`, {});
+  revokeApiKey(id: string): Observable<any> {
+    return this.api.delete<any>(`${this.prefix}/api-keys/${id}`);
   }
 
   // ── Data Connections ──
-  getDataConnections(): Observable<DataConnection[]> {
-    return this.api.get<DataConnection[]>(`${this.prefix}/data-connections`);
+  getDataConnections(): Observable<DataConnectionOut[]> {
+    return this.api.get<DataConnectionOut[]>(`${this.prefix}/data-connections`);
   }
 
-  getDataConnection(id: string): Observable<DataConnection> {
-    return this.api.get<DataConnection>(`${this.prefix}/data-connections/${id}`);
+  createDataConnection(data: { name: string; connection_type: string; provider?: string; config_json: Record<string, any>; sync_frequency?: string }): Observable<DataConnectionOut> {
+    return this.api.post<DataConnectionOut>(`${this.prefix}/data-connections`, data);
   }
 
-  testDataConnection(id: string): Observable<{ success: boolean; message: string }> {
-    return this.api.post<{ success: boolean; message: string }>(`${this.prefix}/data-connections/${id}/test`, {});
+  updateDataConnection(id: string, data: Partial<{ name: string; config_json: Record<string, any>; sync_frequency: string }>): Observable<DataConnectionOut> {
+    return this.api.put<DataConnectionOut>(`${this.prefix}/data-connections/${id}`, data);
   }
 
-  syncDataConnection(id: string): Observable<any> {
-    return this.api.post<any>(`${this.prefix}/data-connections/${id}/sync`, {});
+  testDataConnection(id: string): Observable<ConnectionTestResult> {
+    return this.api.post<ConnectionTestResult>(`${this.prefix}/data-connections/${id}/test`, {});
   }
 
   // ── Audit Log ──
-  getAuditLog(action?: string, user_id?: string, limit = 100, offset = 0): Observable<AuditLogEntry[]> {
-    const params: any = { limit, offset };
-    if (action) params.action = action;
-    if (user_id) params.user_id = user_id;
-    return this.api.get<AuditLogEntry[]>(`${this.prefix}/audit-log`, params);
-  }
-
-  getAuditLogEntry(id: string): Observable<AuditLogEntry> {
-    return this.api.get<AuditLogEntry>(`${this.prefix}/audit-log/${id}`);
+  getAuditLog(params?: { action?: string; resource_type?: string; limit?: number; offset?: number }): Observable<AuditLogOut[]> {
+    return this.api.get<AuditLogOut[]>(`${this.prefix}/audit-log`, params);
   }
 
   // ── Platform Settings ──
-  getSettings(category?: string): Observable<PlatformSettings[]> {
-    const params: any = {};
-    if (category) params.category = category;
-    return this.api.get<PlatformSettings[]>(`${this.prefix}/settings`, params);
+  getSettings(): Observable<SettingOut[]> {
+    return this.api.get<SettingOut[]>(`${this.prefix}/settings`);
   }
 
-  updateSetting(id: string, value: any): Observable<PlatformSettings> {
-    return this.api.put<PlatformSettings>(`${this.prefix}/settings/${id}`, { value });
+  updateSettings(settings: Record<string, string>): Observable<SettingOut[]> {
+    return this.api.put<SettingOut[]>(`${this.prefix}/settings`, { settings });
   }
 }

@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AFDA Platform — Multi-Tenant Data Model</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #F8FAFB; color: #1a1a2e; padding: 32px; }
+  
+  h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; color: #0D6B5C; }
+  .subtitle { font-size: 14px; color: #64748B; margin-bottom: 32px; }
+  
+  .section { margin-bottom: 40px; }
+  .section-title { font-size: 16px; font-weight: 700; color: #1E293B; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E2E8F0; display: flex; align-items: center; gap: 8px; }
+  .section-title .badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; text-transform: uppercase; }
+  
+  .tables-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  
+  .table-card {
+    background: white; border: 1px solid #E2E8F0; border-radius: 12px;
+    overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .table-card.primary { border-top: 3px solid #0D6B5C; }
+  .table-card.secondary { border-top: 3px solid #2563EB; }
+  .table-card.mapping { border-top: 3px solid #7C3AED; }
+  .table-card.domain { border-top: 3px solid #D97706; }
+  .table-card.config { border-top: 3px solid #DC2626; }
+  
+  .tc-header {
+    padding: 14px 16px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .tc-name { font-size: 14px; font-weight: 800; font-family: 'SF Mono', 'Fira Code', monospace; }
+  .tc-type { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tc-type.core { background: #E8F5F1; color: #0D6B5C; }
+  .tc-type.mapping { background: #EDE9FE; color: #7C3AED; }
+  .tc-type.ref { background: #EFF6FF; color: #2563EB; }
+  .tc-type.config { background: #FEE2E2; color: #DC2626; }
+  
+  .tc-body { padding: 12px 16px; }
+  
+  .col-row {
+    display: flex; align-items: center; gap: 8px; padding: 5px 0;
+    border-bottom: 1px solid #F1F5F9; font-size: 12px;
+  }
+  .col-row:last-child { border-bottom: none; }
+  
+  .col-icon { width: 16px; text-align: center; font-size: 10px; flex-shrink: 0; }
+  .col-icon.pk { color: #D97706; }
+  .col-icon.fk { color: #2563EB; }
+  .col-icon.idx { color: #7C3AED; }
+  .col-icon.json { color: #DC2626; }
+  
+  .col-name { font-family: 'SF Mono', 'Fira Code', monospace; font-weight: 600; min-width: 180px; color: #1E293B; }
+  .col-type { font-family: 'SF Mono', monospace; font-size: 10px; color: #64748B; min-width: 80px; }
+  .col-note { font-size: 10px; color: #94A3B8; font-style: italic; }
+  .col-note.required { color: #DC2626; font-style: normal; font-weight: 600; }
+  
+  .tc-footer { padding: 8px 16px; background: #FFFBEB; border-top: 1px solid #FDE68A; font-size: 10px; color: #92400E; }
+  .tc-footer.blue { background: #EFF6FF; border-top-color: #BFDBFE; color: #1D4ED8; }
+  .tc-footer.purple { background: #F5F3FF; border-top-color: #DDD6FE; color: #6D28D9; }
+  .tc-footer.green { background: #F0FDF4; border-top-color: #BBF7D0; color: #166534; }
+  
+  /* Relationship Diagram */
+  .rel-diagram {
+    background: white; border: 1px solid #E2E8F0; border-radius: 12px;
+    padding: 24px; margin-bottom: 24px; font-family: 'SF Mono', monospace; font-size: 12px;
+    line-height: 1.8; white-space: pre; overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  
+  .json-block {
+    background: #1E293B; color: #E2E8F0; border-radius: 10px; padding: 20px;
+    font-family: 'SF Mono', monospace; font-size: 12px; line-height: 1.7;
+    overflow-x: auto; margin: 12px 0;
+  }
+  .json-key { color: #7DD3FC; }
+  .json-str { color: #86EFAC; }
+  .json-comment { color: #64748B; }
+  .json-num { color: #FCA5A5; }
+  .json-bool { color: #FDE68A; }
+  
+  .flow-diagram {
+    background: white; border: 1px solid #E2E8F0; border-radius: 12px;
+    padding: 24px; margin: 16px 0;
+  }
+  .flow-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; font-size: 13px; }
+  .flow-box { padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 12px; }
+  .flow-arrow { color: #94A3B8; font-size: 16px; }
+  .flow-box.fe { background: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
+  .flow-box.platform { background: #E8F5F1; color: #0D6B5C; border: 1px solid #A7F3D0; }
+  .flow-box.crud { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+  .flow-box.db { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; }
+  
+  .note-box {
+    background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px;
+    padding: 16px; font-size: 12px; color: #92400E; margin: 16px 0;
+  }
+  .note-box.info { background: #EFF6FF; border-color: #BFDBFE; color: #1D4ED8; }
+  .note-box.danger { background: #FEF2F2; border-color: #FCA5A5; color: #DC2626; }
+  .note-box strong { display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<h1>🏗️ AFDA Multi-Tenant Data Model</h1>
+<p class="subtitle">Platform Service (afda-platform-service) — Identity, Tenancy & Cross-Org Access Control</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ENTITY RELATIONSHIP OVERVIEW -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    Entity Relationship Overview
+    <span class="badge" style="background:#E8F5F1;color:#0D6B5C;">HIERARCHY</span>
+  </div>
+  
+  <div class="rel-diagram">
+<strong style="color:#0D6B5C;">TENANT HIERARCHY</strong>
+
+  customer (tenant root)
+    │
+    ├── 1:N ──▶ organization
+    │              │
+    │              ├── 1:N ──▶ organization_currency  (multi-currency per org)
+    │              │
+    │              ├── 1:N ──▶ [ALL domain tables]    (KPIs, budgets, accounts, etc.)
+    │              │              └── organization_id FK on every row
+    │              │
+    │              └── M:N ──▶ user  (via user_organization with role_id)
+    │
+    ├── 1:N ──▶ user
+    │              └── belongs to 1 customer, access to N orgs
+    │
+    └── default_organization_id FK  (cannot be deleted)
+
+
+<strong style="color:#7C3AED;">CROSS-ORG ACCESS</strong>
+
+  org_access_policy  (denormalized JSON config)
+    │
+    ├── from_organization_id  ──▶  the org GRANTING access
+    ├── to_organization_id    ──▶  the org RECEIVING access
+    ├── row_type              ──▶  'role' | 'user'
+    ├── domain                ──▶  'treasury' | 'accounting' | 'fpa' | etc.
+    ├── access_level          ──▶  'view' | 'edit' | 'full'
+    └── access_config_json    ──▶  { role_ids: [...] } OR { user_ids: [...] }
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TIER 1: CORE IDENTITY TABLES -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    Tier 1 — Core Identity (Platform Service DB)
+    <span class="badge" style="background:#E8F5F1;color:#0D6B5C;">afda_platform_db</span>
+  </div>
+  
+  <div class="tables-grid">
+    <!-- CUSTOMER -->
+    <div class="table-card primary">
+      <div class="tc-header">
+        <span class="tc-name">customer</span>
+        <span class="tc-type core">Tenant Root</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">name</span><span class="col-type">VARCHAR(300)</span><span class="col-note required">NOT NULL</span></div>
+        <div class="col-row"><span class="col-icon idx">🏷️</span><span class="col-name">slug</span><span class="col-type">VARCHAR(100)</span><span class="col-note">UNIQUE — URL-safe identifier</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">legal_name</span><span class="col-type">VARCHAR(500)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">industry</span><span class="col-type">VARCHAR(100)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">plan</span><span class="col-type">VARCHAR(50)</span><span class="col-note">free | pro | enterprise</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">status</span><span class="col-type">VARCHAR(20)</span><span class="col-note">active | suspended | trial</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">default_organization_id</span><span class="col-type">UUID FK</span><span class="col-note">→ organization.id (NOT deletable)</span></div>
+        <div class="col-row"><span class="col-icon json">📦</span><span class="col-name">config_json</span><span class="col-type">JSONB</span><span class="col-note">Billing, branding, limits</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">updated_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+      <div class="tc-footer green">
+        ⚡ default_organization_id is set during customer creation and protected from deletion.
+      </div>
+    </div>
+    
+    <!-- ORGANIZATION -->
+    <div class="table-card primary">
+      <div class="tc-header">
+        <span class="tc-name">organization</span>
+        <span class="tc-type core">Data Boundary</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">customer_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ customer.id NOT NULL</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">name</span><span class="col-type">VARCHAR(300)</span><span class="col-note required">NOT NULL — "Acme US"</span></div>
+        <div class="col-row"><span class="col-icon idx">🏷️</span><span class="col-name">code</span><span class="col-type">VARCHAR(20)</span><span class="col-note">UNIQUE per customer — "AFC-US"</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">legal_entity_name</span><span class="col-type">VARCHAR(500)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">country</span><span class="col-type">VARCHAR(3)</span><span class="col-note">ISO 3166 — US, GB, DE</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">timezone</span><span class="col-type">VARCHAR(50)</span><span class="col-note">America/New_York</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">fiscal_year_end_month</span><span class="col-type">SMALLINT</span><span class="col-note">1-12 (12 = Dec)</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">default_currency_code</span><span class="col-type">VARCHAR(3)</span><span class="col-note">ISO 4217 — USD, EUR</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">status</span><span class="col-type">VARCHAR(20)</span><span class="col-note">active | inactive | archived</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">is_default</span><span class="col-type">BOOLEAN</span><span class="col-note">TRUE = customer's default org</span></div>
+        <div class="col-row"><span class="col-icon json">📦</span><span class="col-name">settings_json</span><span class="col-type">JSONB</span><span class="col-note">Org-level overrides</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">updated_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+      <div class="tc-footer">
+        ⚡ ALL domain data (KPIs, budgets, transactions) has organization_id FK to this table.
+      </div>
+    </div>
+
+    <!-- ORGANIZATION_CURRENCY -->
+    <div class="table-card secondary">
+      <div class="tc-header">
+        <span class="tc-name">organization_currency</span>
+        <span class="tc-type ref">Reference</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">organization_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ organization.id</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">currency_code</span><span class="col-type">VARCHAR(3)</span><span class="col-note required">ISO 4217 — USD, EUR, GBP</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">is_primary</span><span class="col-type">BOOLEAN</span><span class="col-note">TRUE = functional currency</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">is_reporting</span><span class="col-type">BOOLEAN</span><span class="col-note">TRUE = used in reports</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">exchange_rate_source</span><span class="col-type">VARCHAR(50)</span><span class="col-note">manual | ecb | openexchange</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">status</span><span class="col-type">VARCHAR(20)</span><span class="col-note">active | inactive</span></div>
+      </div>
+      <div class="tc-footer blue">
+        UNIQUE(organization_id, currency_code) — one org can have many currencies.
+      </div>
+    </div>
+
+    <!-- USER -->
+    <div class="table-card primary">
+      <div class="tc-header">
+        <span class="tc-name">user</span>
+        <span class="tc-type core">Identity</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">customer_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ customer.id — tenant binding</span></div>
+        <div class="col-row"><span class="col-icon idx">🏷️</span><span class="col-name">email</span><span class="col-type">VARCHAR(300)</span><span class="col-note">UNIQUE globally</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">display_name</span><span class="col-type">VARCHAR(200)</span><span class="col-note required">NOT NULL</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">password_hash</span><span class="col-type">VARCHAR(300)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">avatar_url</span><span class="col-type">VARCHAR(500)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">status</span><span class="col-type">VARCHAR(20)</span><span class="col-note">active | inactive | invited</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">is_customer_admin</span><span class="col-type">BOOLEAN</span><span class="col-note">Can manage all orgs + users</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">last_login_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">updated_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+      <div class="tc-footer green">
+        User belongs to exactly 1 customer. Access to orgs is via user_organization M:M.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TIER 2: ACCESS & ROLE MAPPING -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    Tier 2 — Access & Role Mapping
+    <span class="badge" style="background:#EDE9FE;color:#7C3AED;">M:M TABLES</span>
+  </div>
+  
+  <div class="tables-grid">
+    <!-- ROLE -->
+    <div class="table-card secondary">
+      <div class="tc-header">
+        <span class="tc-name">role</span>
+        <span class="tc-type ref">Reference</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">customer_id</span><span class="col-type">UUID FK</span><span class="col-note">→ customer.id (NULL = system role)</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">name</span><span class="col-type">VARCHAR(100)</span><span class="col-note required">admin, controller, analyst, etc.</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">description</span><span class="col-type">TEXT</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon json">📦</span><span class="col-name">permissions_json</span><span class="col-type">JSONB</span><span class="col-note">{ "treasury": ["view","edit"], ... }</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">is_system</span><span class="col-type">BOOLEAN</span><span class="col-note">TRUE = built-in, cannot delete</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+      <div class="tc-footer blue">
+        System roles (customer_id=NULL) are shared across all customers. Custom roles are customer-scoped.
+      </div>
+    </div>
+
+    <!-- USER_ORGANIZATION -->
+    <div class="table-card mapping">
+      <div class="tc-header">
+        <span class="tc-name">user_organization</span>
+        <span class="tc-type mapping">M:M Mapping</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">user_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ user.id</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">organization_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ organization.id</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">role_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ role.id (role WITHIN this org)</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">is_default</span><span class="col-type">BOOLEAN</span><span class="col-note">User's default org on login</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">status</span><span class="col-type">VARCHAR(20)</span><span class="col-note">active | suspended</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">joined_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+      <div class="tc-footer purple">
+        UNIQUE(user_id, organization_id) — one role per user per org. Exactly 1 row has is_default=TRUE per user.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TIER 3: CROSS-ORG ACCESS POLICY -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    Tier 3 — Cross-Organization Access Policy
+    <span class="badge" style="background:#FEE2E2;color:#DC2626;">CRITICAL</span>
+  </div>
+  
+  <div class="note-box info">
+    <strong>🔐 Cross-Org Sharing Model</strong>
+    Organizations can optionally grant domain-level access to other organizations within the same customer.
+    Access is NOT mutual — Org A granting access to Org B does NOT mean Org B grants access to Org A.
+    Each policy row is unidirectional: from_org → to_org for a specific domain.
+  </div>
+  
+  <div class="tables-grid">
+    <!-- ORG_ACCESS_POLICY -->
+    <div class="table-card config" style="grid-column: 1 / -1;">
+      <div class="tc-header">
+        <span class="tc-name">org_access_policy</span>
+        <span class="tc-type config">Cross-Org Config</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">customer_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ customer.id (both orgs must belong to same customer)</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">from_organization_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ organization.id — the org GRANTING access to its data</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">to_organization_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ organization.id — the org RECEIVING access</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">domain</span><span class="col-type">VARCHAR(50)</span><span class="col-note required">treasury | accounting | fpa | risk | monitoring | command_center | agent_studio | admin</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">row_type</span><span class="col-type">VARCHAR(20)</span><span class="col-note required">'role' = role-based filter | 'user' = user-specific filter</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">access_level</span><span class="col-type">VARCHAR(20)</span><span class="col-note required">view | edit | full</span></div>
+        <div class="col-row"><span class="col-icon json">📦</span><span class="col-name">access_config_json</span><span class="col-type">JSONB</span><span class="col-note required">See JSON examples below</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">is_active</span><span class="col-type">BOOLEAN</span><span class="col-note">Toggle without deleting</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">granted_by_user_id</span><span class="col-type">UUID FK</span><span class="col-note">→ user.id — audit trail</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">expires_at</span><span class="col-type">TIMESTAMP</span><span class="col-note">NULL = no expiry</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">updated_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+      <div class="tc-footer" style="background:#FEF2F2; border-color:#FCA5A5; color:#DC2626;">
+        ⚠️ CHECK: from_organization_id ≠ to_organization_id. Both must share same customer_id.
+        UNIQUE(from_organization_id, to_organization_id, domain, row_type) to prevent duplicates.
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON Examples -->
+  <h4 style="margin: 20px 0 8px; font-size: 13px; color: #1E293B;">access_config_json Examples:</h4>
+  
+  <div class="json-block"><span class="json-comment">// row_type = 'role' → Any user in to_org with these roles can access from_org's treasury data</span>
+{
+  <span class="json-key">"from_organization_id"</span>: <span class="json-str">"org-acme-us"</span>,
+  <span class="json-key">"to_organization_id"</span>: <span class="json-str">"org-acme-eu"</span>,
+  <span class="json-key">"domain"</span>: <span class="json-str">"treasury"</span>,
+  <span class="json-key">"row_type"</span>: <span class="json-str">"role"</span>,
+  <span class="json-key">"access_level"</span>: <span class="json-str">"view"</span>,
+  <span class="json-key">"access_config_json"</span>: {
+    <span class="json-key">"allowed_role_ids"</span>: [<span class="json-str">"role-controller-uuid"</span>, <span class="json-str">"role-cfo-uuid"</span>],
+    <span class="json-key">"description"</span>: <span class="json-str">"EU controllers and CFO can view US treasury data"</span>
+  }
+}
+
+<span class="json-comment">// row_type = 'user' → Specific users in to_org can access from_org's accounting data</span>
+{
+  <span class="json-key">"from_organization_id"</span>: <span class="json-str">"org-acme-us"</span>,
+  <span class="json-key">"to_organization_id"</span>: <span class="json-str">"org-acme-uk"</span>,
+  <span class="json-key">"domain"</span>: <span class="json-str">"accounting"</span>,
+  <span class="json-key">"row_type"</span>: <span class="json-str">"user"</span>,
+  <span class="json-key">"access_level"</span>: <span class="json-str">"edit"</span>,
+  <span class="json-key">"access_config_json"</span>: {
+    <span class="json-key">"allowed_user_ids"</span>: [<span class="json-str">"user-sarah-uuid"</span>, <span class="json-str">"user-mike-uuid"</span>],
+    <span class="json-key">"description"</span>: <span class="json-str">"Sarah and Mike in UK can edit US accounting data for IC recon"</span>,
+    <span class="json-key">"restrict_to_entities"</span>: [<span class="json-str">"intercompany"</span>]  <span class="json-comment">// optional sub-domain filter</span>
+  }
+}</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TIER 4: PLATFORM CONFIG -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    Tier 4 — Platform Config (also in Platform Service DB)
+    <span class="badge" style="background:#FEF3C7;color:#92400E;">CONFIG</span>
+  </div>
+  
+  <div class="tables-grid">
+    <!-- API_KEY -->
+    <div class="table-card domain">
+      <div class="tc-header">
+        <span class="tc-name">api_key</span>
+        <span class="tc-type ref">Per-Customer</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">customer_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ customer.id</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">organization_id</span><span class="col-type">UUID FK</span><span class="col-note">→ organization.id (NULL = customer-wide)</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">name</span><span class="col-type">VARCHAR(200)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">key_prefix</span><span class="col-type">VARCHAR(20)</span><span class="col-note">afda_xxxxxxxx</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">key_hash</span><span class="col-type">VARCHAR(64)</span><span class="col-note">SHA-256</span></div>
+        <div class="col-row"><span class="col-icon json">📦</span><span class="col-name">scopes</span><span class="col-type">JSONB</span><span class="col-note">["agents","transactions"]</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">is_active</span><span class="col-type">BOOLEAN</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">expires_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">created_by</span><span class="col-type">UUID FK</span><span class="col-note">→ user.id</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+    </div>
+
+    <!-- DATA_CONNECTION -->
+    <div class="table-card domain">
+      <div class="tc-header">
+        <span class="tc-name">data_connection</span>
+        <span class="tc-type ref">Per-Organization</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">customer_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ customer.id</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">organization_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ organization.id</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">name</span><span class="col-type">VARCHAR(200)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">connection_type</span><span class="col-type">VARCHAR(50)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">provider</span><span class="col-type">VARCHAR(100)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon json">📦</span><span class="col-name">config_json</span><span class="col-type">JSONB</span><span class="col-note">Host, credentials (encrypted)</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">status</span><span class="col-type">VARCHAR(20)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">sync_frequency</span><span class="col-type">VARCHAR(20)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">last_sync_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+    </div>
+
+    <!-- PLATFORM_SETTING -->
+    <div class="table-card domain">
+      <div class="tc-header">
+        <span class="tc-name">platform_setting</span>
+        <span class="tc-type ref">Hierarchical</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">customer_id</span><span class="col-type">UUID FK</span><span class="col-note">→ customer.id (NULL = global default)</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">organization_id</span><span class="col-type">UUID FK</span><span class="col-note">→ organization.id (NULL = customer-wide)</span></div>
+        <div class="col-row"><span class="col-icon idx">🏷️</span><span class="col-name">key</span><span class="col-type">VARCHAR(200)</span><span class="col-note">org.name, sec.mfa, ff.crewai</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">value</span><span class="col-type">TEXT</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">category</span><span class="col-type">VARCHAR(50)</span><span class="col-note">org | pref | security | feature</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">updated_by</span><span class="col-type">UUID FK</span><span class="col-note">→ user.id</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">updated_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+      <div class="tc-footer blue">
+        Resolution: org-level → customer-level → global default. Most specific wins.
+      </div>
+    </div>
+
+    <!-- AUDIT_LOG -->
+    <div class="table-card domain">
+      <div class="tc-header">
+        <span class="tc-name">audit_log</span>
+        <span class="tc-type ref">Append-only</span>
+      </div>
+      <div class="tc-body">
+        <div class="col-row"><span class="col-icon pk">🔑</span><span class="col-name">id</span><span class="col-type">UUID</span><span class="col-note">PK</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">customer_id</span><span class="col-type">UUID FK</span><span class="col-note required">→ customer.id</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">organization_id</span><span class="col-type">UUID FK</span><span class="col-note">→ organization.id</span></div>
+        <div class="col-row"><span class="col-icon fk">🔗</span><span class="col-name">user_id</span><span class="col-type">UUID FK</span><span class="col-note">→ user.id</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">action</span><span class="col-type">VARCHAR(50)</span><span class="col-note">create | update | delete | login</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">resource_type</span><span class="col-type">VARCHAR(50)</span><span class="col-note">user | api_key | budget | etc.</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">resource_id</span><span class="col-type">VARCHAR(100)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon json">📦</span><span class="col-name">details_json</span><span class="col-type">JSONB</span><span class="col-note">Before/after diff</span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">ip_address</span><span class="col-type">VARCHAR(45)</span><span class="col-note"></span></div>
+        <div class="col-row"><span class="col-icon">📝</span><span class="col-name">created_at</span><span class="col-type">TIMESTAMP</span><span class="col-note"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- DOMAIN TABLE CHANGES -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    Domain Table Changes (CRUD API DB — afda_db)
+    <span class="badge" style="background:#FEF3C7;color:#92400E;">MIGRATION</span>
+  </div>
+  
+  <div class="note-box danger">
+    <strong>⚠️ EVERY domain table must add organization_id</strong>
+    All existing tables (kpi, action_item, executive_briefing, budget, budget_line_item, variance_record, 
+    forecast_scenario, bank_account, cash_position_history, ar_invoice, liquidity_metric, chart_of_accounts, 
+    journal_entry, close_period, close_task, alert, alert_rule, risk_score, service_registry) 
+    must add <code>organization_id UUID NOT NULL FK → organization.id</code> and index on it.
+    Every SELECT, INSERT, UPDATE, DELETE must be scoped by organization_id.
+  </div>
+  
+  <div class="json-block"><span class="json-comment">-- Example migration for every domain table:</span>
+
+ALTER TABLE kpi ADD COLUMN organization_id UUID NOT NULL;
+ALTER TABLE kpi ADD CONSTRAINT fk_kpi_org FOREIGN KEY (organization_id) REFERENCES organization(id);
+CREATE INDEX idx_kpi_org ON kpi(organization_id);
+
+<span class="json-comment">-- Same pattern for ALL ~20 domain tables</span>
+<span class="json-comment">-- DAO base class adds: .where(Model.organization_id == ctx.organization_id)</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- API FLOW -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    API Request Flow
+    <span class="badge" style="background:#EFF6FF;color:#2563EB;">RUNTIME</span>
+  </div>
+  
+  <div class="flow-diagram">
+    <h4 style="font-size: 13px; margin-bottom: 12px;">Standard Request (User viewing treasury data):</h4>
+    <div class="flow-row">
+      <span class="flow-box fe">Angular Frontend</span>
+      <span class="flow-arrow">→</span>
+      <span style="font-size: 11px; font-family: monospace; color: #64748B;">
+        Authorization: Bearer {jwt}<br>
+        X-Organization-Id: {org-uuid}
+      </span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-arrow" style="margin-left: 20px;">↓</span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-box platform">Platform Service :8002</span>
+      <span style="font-size: 11px; color: #64748B;">
+        1. Validate JWT → get user_id + customer_id<br>
+        2. Check user_organization → user has access to this org?<br>
+        3. Return org context (role, permissions)
+      </span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-arrow" style="margin-left: 20px;">↓</span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-box crud">CRUD API :8000</span>
+      <span style="font-size: 11px; color: #64748B;">
+        4. Filter all queries: WHERE organization_id = {org-uuid}<br>
+        5. For cross-org: check org_access_policy → expand allowed org_ids<br>
+        6. Return data scoped to authorized organizations only
+      </span>
+    </div>
+    
+    <h4 style="font-size: 13px; margin: 20px 0 12px;">Cross-Org Request (EU user viewing US treasury):</h4>
+    <div class="flow-row">
+      <span class="flow-box fe">EU User selects "Acme US" in org dropdown</span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-arrow" style="margin-left: 20px;">↓</span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-box platform">Platform Service</span>
+      <span style="font-size: 11px; color: #64748B;">
+        1. User belongs to Acme EU org<br>
+        2. Check org_access_policy: Acme US → Acme EU, domain=treasury, row_type=role<br>
+        3. User's role in Acme EU matches allowed_role_ids? ✓<br>
+        4. Grant access_level: "view"
+      </span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-arrow" style="margin-left: 20px;">↓</span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-box crud">CRUD API</span>
+      <span style="font-size: 11px; color: #64748B;">
+        5. WHERE organization_id = 'acme-us-uuid' + read-only mode
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- JWT TOKEN STRUCTURE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    JWT Token Structure
+    <span class="badge" style="background:#E8F5F1;color:#0D6B5C;">AUTH</span>
+  </div>
+  
+  <div class="json-block">{
+  <span class="json-key">"sub"</span>: <span class="json-str">"user-uuid-here"</span>,
+  <span class="json-key">"customer_id"</span>: <span class="json-str">"customer-uuid-here"</span>,
+  <span class="json-key">"email"</span>: <span class="json-str">"kishore@acme.com"</span>,
+  <span class="json-key">"display_name"</span>: <span class="json-str">"Aruna Kishore Veleti"</span>,
+  <span class="json-key">"is_customer_admin"</span>: <span class="json-bool">true</span>,
+  <span class="json-key">"organizations"</span>: [
+    {
+      <span class="json-key">"id"</span>: <span class="json-str">"org-acme-us"</span>,
+      <span class="json-key">"name"</span>: <span class="json-str">"Acme US"</span>,
+      <span class="json-key">"code"</span>: <span class="json-str">"AFC-US"</span>,
+      <span class="json-key">"role"</span>: <span class="json-str">"admin"</span>,
+      <span class="json-key">"is_default"</span>: <span class="json-bool">true</span>
+    },
+    {
+      <span class="json-key">"id"</span>: <span class="json-str">"org-acme-eu"</span>,
+      <span class="json-key">"name"</span>: <span class="json-str">"Acme EU"</span>,
+      <span class="json-key">"code"</span>: <span class="json-str">"AFC-EU"</span>,
+      <span class="json-key">"role"</span>: <span class="json-str">"controller"</span>,
+      <span class="json-key">"is_default"</span>: <span class="json-bool">false</span>
+    }
+  ],
+  <span class="json-key">"exp"</span>: <span class="json-num">1738972800</span>,
+  <span class="json-key">"iat"</span>: <span class="json-num">1738971000</span>
+}</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- FRONTEND ORG SELECTOR -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    Frontend Organization Selector
+    <span class="badge" style="background:#EFF6FF;color:#2563EB;">UI</span>
+  </div>
+  
+  <div style="background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 24px; display: flex; gap: 40px; align-items: flex-start;">
+    <!-- Navbar mockup -->
+    <div style="flex: 1;">
+      <div style="font-size: 12px; color: #64748B; margin-bottom: 8px;">Navbar (top-right, before user block):</div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0;">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: white; border: 1px solid #D1D5DB; border-radius: 6px; cursor: pointer;">
+          <span style="font-size: 13px;">🏢</span>
+          <span style="font-size: 12px; font-weight: 600;">Acme US</span>
+          <span style="font-size: 10px; color: #94A3B8;">AFC-US</span>
+          <span style="font-size: 10px; color: #94A3B8;">▼</span>
+        </div>
+        <div style="width: 1px; height: 24px; background: #E2E8F0;"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="width: 30px; height: 30px; background: #0D6B5C; border-radius: 50%; display: grid; place-items: center; color: white; font-size: 11px; font-weight: 700;">AK</div>
+          <div>
+            <div style="font-size: 12px; font-weight: 600;">Aruna Kishore</div>
+            <div style="font-size: 10px; color: #94A3B8;">admin</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="font-size: 12px; color: #64748B; margin: 16px 0 8px;">Dropdown (expanded):</div>
+      <div style="width: 280px; background: white; border: 1px solid #D1D5DB; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
+        <div style="padding: 10px 14px; border-bottom: 1px solid #F1F5F9;">
+          <div style="font-size: 10px; font-weight: 700; color: #94A3B8; text-transform: uppercase; margin-bottom: 6px;">Your Organizations</div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #E8F5F1; border-radius: 6px; cursor: pointer;">
+            <span style="color: #059669;">✓</span>
+            <span style="font-size: 12px; font-weight: 600;">Acme US</span>
+            <span style="font-size: 10px; color: #94A3B8; margin-left: auto;">AFC-US · admin</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer;">
+            <span style="color: transparent;">✓</span>
+            <span style="font-size: 12px; font-weight: 500; color: #374151;">Acme EU</span>
+            <span style="font-size: 10px; color: #94A3B8; margin-left: auto;">AFC-EU · controller</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; cursor: pointer;">
+            <span style="color: transparent;">✓</span>
+            <span style="font-size: 12px; font-weight: 500; color: #374151;">Acme UK</span>
+            <span style="font-size: 10px; color: #94A3B8; margin-left: auto;">AFC-UK · viewer</span>
+          </div>
+        </div>
+        <div style="padding: 8px 14px; background: #F8FAFC;">
+          <div style="font-size: 10px; font-weight: 700; color: #94A3B8; text-transform: uppercase; margin-bottom: 4px;">Cross-Org Access</div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
+            <span style="font-size: 10px; color: #7C3AED;">⟲</span>
+            <span style="font-size: 11px; color: #7C3AED;">Acme Asia</span>
+            <span style="font-size: 9px; color: #94A3B8; margin-left: auto;">treasury (view)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- IMPLEMENTATION PLAN -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-title">
+    Implementation Scripts Plan
+    <span class="badge" style="background:#FEF3C7;color:#92400E;">5 SCRIPTS</span>
+  </div>
+  
+  <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: white; border: 1px solid #E2E8F0; border-radius: 8px; border-left: 4px solid #0D6B5C;">
+      <span style="font-size: 18px; font-weight: 800; color: #0D6B5C; min-width: 30px;">22</span>
+      <div>
+        <div style="font-size: 13px; font-weight: 700;">Platform Service Foundation</div>
+        <div style="font-size: 11px; color: #64748B;">Docker Compose (new DB: afda_platform_db), FastAPI scaffold, SQLAlchemy models for customer, organization, organization_currency, user, role, user_organization, org_access_policy, api_key, data_connection, platform_setting, audit_log</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: white; border: 1px solid #E2E8F0; border-radius: 8px; border-left: 4px solid #2563EB;">
+      <span style="font-size: 18px; font-weight: 800; color: #2563EB; min-width: 30px;">23</span>
+      <div>
+        <div style="font-size: 13px; font-weight: 700;">Platform Service API + Auth Migration</div>
+        <div style="font-size: 11px; color: #64748B;">CRUD endpoints for all platform tables, JWT auth moves here (login returns org list in token), signup creates customer + default org, org-context middleware</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: white; border: 1px solid #E2E8F0; border-radius: 8px; border-left: 4px solid #7C3AED;">
+      <span style="font-size: 18px; font-weight: 800; color: #7C3AED; min-width: 30px;">24</span>
+      <div>
+        <div style="font-size: 13px; font-weight: 700;">CRUD API Multi-Tenant Migration</div>
+        <div style="font-size: 11px; color: #64748B;">Add organization_id to ALL domain tables, update ALL DAOs with org filtering, org-context dependency that reads X-Organization-Id header, remove old admin/user/role tables from CRUD API</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: white; border: 1px solid #E2E8F0; border-radius: 8px; border-left: 4px solid #D97706;">
+      <span style="font-size: 18px; font-weight: 800; color: #D97706; min-width: 30px;">25</span>
+      <div>
+        <div style="font-size: 13px; font-weight: 700;">Seed Data + End-to-End Verification</div>
+        <div style="font-size: 11px; color: #64748B;">Create demo customer "Acme Financial" with 3 orgs (US, EU, UK), seed users with org memberships, seed domain data per org, cross-org policies, full curl test suite</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: white; border: 1px solid #E2E8F0; border-radius: 8px; border-left: 4px solid #DC2626;">
+      <span style="font-size: 18px; font-weight: 800; color: #DC2626; min-width: 30px;">26</span>
+      <div>
+        <div style="font-size: 13px; font-weight: 700;">Angular Multi-Tenant Wiring</div>
+        <div style="font-size: 11px; color: #64748B;">Org selector component in navbar, org-context service (signals), HTTP interceptor adds X-Organization-Id, auth service updated for new JWT structure, proxy config for platform service, admin pages rewired to platform service</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

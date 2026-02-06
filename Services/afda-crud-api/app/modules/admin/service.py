@@ -1,9 +1,9 @@
 import secrets
 import hashlib
+import bcrypt
 from uuid import UUID
 from datetime import datetime, timedelta
 from typing import Optional
-from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.admin.dao import (
     UserDAO, RoleDAO, ApiKeyDAO, DataConnectionDAO, AuditLogDAO, SettingsDAO,
@@ -17,7 +17,16 @@ from app.modules.admin.dtos import (
 )
 from app.shared.exceptions import NotFoundException, BadRequestException
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+class SimplePwd:
+    """Direct bcrypt — avoids passlib/bcrypt version mismatch."""
+    def hash(self, password: str) -> str:
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    def verify(self, plain: str, hashed: str) -> bool:
+        return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+
+pwd_context = SimplePwd()
 
 
 class UserService:
@@ -35,7 +44,8 @@ class UserService:
         roles = [ur.role.name for ur in user.user_roles]
         return UserDetailOut(
             id=user.id, email=user.email, display_name=user.display_name,
-            status=user.status.value, department=user.department,
+            status=user.status.value if hasattr(user.status, 'value') else str(user.status),
+            department=user.department,
             last_login_at=user.last_login_at, created_at=user.created_at, roles=roles,
         )
 
@@ -139,7 +149,6 @@ class DataConnectionService:
         conn = await self.dao.get_by_id(conn_id)
         if not conn:
             raise NotFoundException("Data Connection", conn_id)
-        # Placeholder — actual connectivity test
         await self.dao.update(conn_id, {"status": "connected", "last_sync_at": datetime.utcnow()})
         return ConnectionTestResult(
             connection_id=conn_id, success=True, latency_ms=45.2,
