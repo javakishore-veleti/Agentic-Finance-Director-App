@@ -27,8 +27,8 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: create tables if they don't exist (dev convenience)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Tables managed by Alembic — run: npm run db:platform:migrate
+#     cd Services/afda-platform-service && alembic upgrade head
     print(f"🏢 {settings.APP_NAME} v{settings.APP_VERSION} started on :8002")
     print(f"   Database: {settings.POSTGRES_DB}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}")
     yield

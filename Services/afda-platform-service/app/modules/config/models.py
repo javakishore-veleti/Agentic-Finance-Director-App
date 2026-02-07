@@ -1,9 +1,9 @@
-"""
-Platform configuration models: API keys, data connections, settings, audit log.
-"""
+"""Config models: ApiKey, DataConnection, PlatformSetting, AuditLog."""
 import uuid
 from datetime import datetime
-from sqlalchemy import String, Text, Boolean, DateTime, ForeignKey, Index
+from sqlalchemy import (
+    Column, String, Boolean, DateTime, ForeignKey, Index, Text, Integer,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.database import Base
@@ -19,14 +19,15 @@ class ApiKey(Base):
         UUID(as_uuid=True), ForeignKey("customer.id"), nullable=False
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("organization.id"), nullable=True  # NULL = customer-wide
+        UUID(as_uuid=True), ForeignKey("organization.id"), nullable=True
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    key_prefix: Mapped[str] = mapped_column(String(20), nullable=False)  # afda_xxxxxxxx
-    key_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256
+    key_prefix: Mapped[str] = mapped_column(String(20), nullable=False)
+    key_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     scopes: Mapped[dict] = mapped_column(JSONB, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("platform_user.id"), nullable=True
     )
@@ -53,10 +54,11 @@ class DataConnection(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     connection_type: Mapped[str] = mapped_column(String(50), nullable=False)
     provider: Mapped[str] = mapped_column(String(100), nullable=True)
-    config_json: Mapped[dict] = mapped_column(JSONB, default=dict)  # encrypted credentials
+    config_json: Mapped[dict] = mapped_column(JSONB, default=dict)
     status: Mapped[str] = mapped_column(String(20), default="pending")
     sync_frequency: Mapped[str] = mapped_column(String(20), default="daily")
     last_sync_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_error: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -64,7 +66,6 @@ class DataConnection(Base):
 
     __table_args__ = (
         Index("idx_dataconn_customer", "customer_id"),
-        Index("idx_dataconn_org", "organization_id"),
     )
 
 
@@ -75,23 +76,26 @@ class PlatformSetting(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     customer_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("customer.id"), nullable=True  # NULL = global default
+        UUID(as_uuid=True), ForeignKey("customer.id"), nullable=True
     )
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("organization.id"), nullable=True  # NULL = customer-wide
+        UUID(as_uuid=True), ForeignKey("organization.id"), nullable=True
     )
     key: Mapped[str] = mapped_column(String(200), nullable=False)
     value: Mapped[str] = mapped_column(Text, nullable=True)
     category: Mapped[str] = mapped_column(String(50), default="general")
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
     updated_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("platform_user.id"), nullable=True
     )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
     __table_args__ = (
-        Index("idx_setting_lookup", "customer_id", "organization_id", "key"),
+        Index("idx_setting_customer", "customer_id"),
+        Index("idx_setting_key", "key"),
     )
 
 
@@ -110,6 +114,7 @@ class AuditLog(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("platform_user.id"), nullable=True
     )
+    actor_email: Mapped[str] = mapped_column(String(300), nullable=True)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False)
     resource_id: Mapped[str] = mapped_column(String(100), nullable=True)
@@ -119,7 +124,5 @@ class AuditLog(Base):
 
     __table_args__ = (
         Index("idx_audit_customer", "customer_id"),
-        Index("idx_audit_org", "organization_id"),
-        Index("idx_audit_user", "user_id"),
-        Index("idx_audit_created", "created_at"),
+        Index("idx_audit_action", "action"),
     )

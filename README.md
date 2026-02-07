@@ -236,3 +236,11 @@ The system uses a central **AI Agent** node in n8n that acts as a Finance Direct
 ## License
 
 MIT
+
+
+```shell
+
+npm run setup:local-docker-all-stop
+
+
+```

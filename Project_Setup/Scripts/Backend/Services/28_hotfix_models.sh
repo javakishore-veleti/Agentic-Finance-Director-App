@@ -1,3 +1,17 @@
+#!/bin/bash
+###############################################################################
+# 28_hotfix_models.sh
+# Restores identity/models.py with ALL 6 models (Customer, Organization,
+# OrganizationCurrency, User, Role, UserOrganization) plus adds department.
+# Script 28 accidentally dropped Customer, Organization, OrganizationCurrency.
+###############################################################################
+set -e
+
+APP="Services/afda-platform-service/app"
+
+echo "Restoring identity/models.py with all 6 models..."
+
+cat > "$APP/modules/identity/models.py" << 'PYEOF'
 """
 Identity models - all platform models live here because SQLAlchemy
 relationships require models in the same registry.
@@ -211,3 +225,10 @@ class UserOrganization(Base):
     user: Mapped["User"] = relationship(back_populates="user_organizations")
     organization: Mapped["Organization"] = relationship(back_populates="user_organizations")
     role: Mapped["Role"] = relationship(back_populates="user_organizations")
+PYEOF
+
+echo "  Done. 6 models restored:"
+echo "    Customer, Organization, OrganizationCurrency"
+echo "    User (+department), Role, UserOrganization"
+echo ""
+echo "  Platform Service will auto-reload."

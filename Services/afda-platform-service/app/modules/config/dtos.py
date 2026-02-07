@@ -22,6 +22,7 @@ class ApiKeyCreateRequest(BaseModel):
     name: str
     organization_id: Optional[uuid.UUID] = None
     scopes: list = []
+    expires_in_days: Optional[int] = 90
     expires_at: Optional[datetime] = None
 
 

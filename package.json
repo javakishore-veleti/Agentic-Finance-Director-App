@@ -71,7 +71,11 @@
     "clean:pyc": "find Services/ -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null; echo 'Cleaned'",
     "clean:venv": "rm -rf $HOME/runtime_data/python_venvs/Agentic-Finance-Director-App_venv && echo 'Venv removed'",
     "clean:all": "npm run clean && npm run clean:pyc",
-    "dev:platform": "VENV=$HOME/runtime_data/python_venvs/Agentic-Finance-Director-App_venv && cd Services/afda-platform-service && $VENV/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8002"
+    "dev:platform": "VENV=$HOME/runtime_data/python_venvs/Agentic-Finance-Director-App_venv && cd Services/afda-platform-service && $VENV/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8002",
+    "db:platform:migrate": "VENV=$HOME/runtime_data/python_venvs/Agentic-Finance-Director-App_venv && cd Services/afda-platform-service && $VENV/bin/alembic upgrade head",
+    "db:platform:reset": "VENV=$HOME/runtime_data/python_venvs/Agentic-Finance-Director-App_venv && cd Services/afda-platform-service && bash scripts/reset_platform_db.sh",
+    "db:platform:seed": "VENV=$HOME/runtime_data/python_venvs/Agentic-Finance-Director-App_venv && cd Services/afda-platform-service && $VENV/bin/python -m scripts.seed_platform",
+    "db:platform:current": "VENV=$HOME/runtime_data/python_venvs/Agentic-Finance-Director-App_venv && cd Services/afda-platform-service && $VENV/bin/alembic current"
   },
   "engines": {
     "node": ">=18.0.0",

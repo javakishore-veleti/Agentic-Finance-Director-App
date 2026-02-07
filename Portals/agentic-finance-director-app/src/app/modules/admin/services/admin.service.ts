@@ -82,9 +82,6 @@ export interface SettingOut {
 
 /**
  * AdminService - routes to Platform Service for tenant isolation.
- *
- * Users and Roles go to /platform/identity/*
- * Config endpoints go to /platform/config/*
  */
 @Injectable({ providedIn: 'root' })
 export class AdminService {

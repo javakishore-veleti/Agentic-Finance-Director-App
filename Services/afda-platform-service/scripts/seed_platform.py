@@ -1,261 +1,112 @@
 """
-Platform Service Seed Script
-Creates: 1 customer, 2 orgs, 4 roles, 3 users, user-org mappings, currencies.
+Seed platform database with demo data.
+Run: cd Services/afda-platform-service && python -m scripts.seed_platform
 
-Migrates the existing users from the old CRUD API users table to the new
-platform_users table with proper customer/org/role bindings.
-
-Run:
-  cd Services/afda-platform-service
-  python -m scripts.seed_platform
+Creates:
+  - Customer: Acme Financial Corp
+  - Organization: ACME-HQ (default)
+  - Admin user: admin@acmefinancial.com / admin123
+  - Roles: Admin, Analyst, Viewer (system roles)
 """
 import asyncio
 import uuid
-import sys
-import os
+from datetime import datetime
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from app.config import get_settings
-from app.database import engine, AsyncSessionLocal, Base
+#from app.database import engine, async_session_factory
+from app.database import engine, AsyncSessionLocal as async_session_factory
 from app.auth.password import hash_password
-from app.modules.identity.models import (
-    Customer, Organization, OrganizationCurrency,
-    User, Role, UserOrganization,
-)
-
-settings = get_settings()
-
-# ── Fixed UUIDs for deterministic seeding (same IDs across re-runs) ──
-CUSTOMER_ID = uuid.UUID("00000000-0000-4000-a000-000000000001")
-ORG_US_ID   = uuid.UUID("00000000-0000-4000-a000-000000000010")
-ORG_EU_ID   = uuid.UUID("00000000-0000-4000-a000-000000000020")
-
-ROLE_ADMIN_ID      = uuid.UUID("00000000-0000-4000-b000-000000000001")
-ROLE_CONTROLLER_ID = uuid.UUID("00000000-0000-4000-b000-000000000002")
-ROLE_ANALYST_ID    = uuid.UUID("00000000-0000-4000-b000-000000000003")
-ROLE_VIEWER_ID     = uuid.UUID("00000000-0000-4000-b000-000000000004")
-
-USER_ADMIN_ID   = uuid.UUID("00000000-0000-4000-c000-000000000001")
-USER_CFO_ID     = uuid.UUID("00000000-0000-4000-c000-000000000002")
-USER_ANALYST_ID = uuid.UUID("00000000-0000-4000-c000-000000000003")
 
 
 async def seed():
-    print("\n🌱 Seeding Platform Service database...\n")
+    async with async_session_factory() as session:
+        from sqlalchemy import text, select
 
-    # Create tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    print("  ✅ Tables created/verified")
-
-    async with AsyncSessionLocal() as db:
-        # ── Check if already seeded ──
-        from sqlalchemy import select
-        existing = await db.execute(select(Customer).where(Customer.id == CUSTOMER_ID))
-        if existing.scalar_one_or_none():
-            print("  ⏭️  Already seeded — skipping")
+        # Check if already seeded
+        result = await session.execute(
+            text("SELECT id FROM customer WHERE slug = 'acme-financial' LIMIT 1")
+        )
+        if result.scalar():
+            print("Already seeded. Skipping.")
             return
 
-        # ══════════════════════════════════════════════
-        # 1. CUSTOMER
-        # ══════════════════════════════════════════════
-        customer = Customer(
-            id=CUSTOMER_ID,
-            name="Acme Financial Corp",
-            slug="acme-financial",
-            legal_name="Acme Financial Corporation, Inc.",
-            industry="Financial Services",
-            plan="enterprise",
-            status="active",
-            config_json={
-                "branding": {"primary_color": "#1a56db", "logo_url": None},
-                "limits": {"max_users": 50, "max_orgs": 10},
-            },
-        )
-        db.add(customer)
-        await db.flush()
-        print("  ✅ Customer: Acme Financial Corp")
+        # Fixed UUIDs for reproducibility
+        customer_id = uuid.UUID("11111111-1111-1111-1111-111111111111")
+        org_id = uuid.UUID("22222222-2222-2222-2222-222222222222")
+        admin_user_id = uuid.UUID("24bffd20-b3bc-4b04-8cb7-1e8f44e9d084")
+        admin_role_id = uuid.UUID("33333333-3333-3333-3333-333333333333")
+        analyst_role_id = uuid.UUID("33333333-3333-3333-3333-333333333334")
+        viewer_role_id = uuid.UUID("33333333-3333-3333-3333-333333333335")
+        now = datetime.utcnow()
 
-        # ══════════════════════════════════════════════
-        # 2. ORGANIZATIONS
-        # ══════════════════════════════════════════════
-        org_us = Organization(
-            id=ORG_US_ID,
-            customer_id=CUSTOMER_ID,
-            name="Acme US (HQ)",
-            code="ACME-US",
-            legal_entity_name="Acme Financial Corp — US Operations",
-            country="US",
-            timezone="America/New_York",
-            fiscal_year_end_month=12,
-            default_currency_code="USD",
-            is_default=True,
-            status="active",
-        )
-        db.add(org_us)
+        # 1. Customer
+        await session.execute(text("""
+            INSERT INTO customer (id, name, slug, legal_name, industry, plan, status, default_organization_id, config_json, created_at, updated_at)
+            VALUES (:id, :name, :slug, :legal_name, :industry, 'pro', 'active', :org_id, '{}', :now, :now)
+        """), {
+            "id": customer_id, "name": "Acme Financial Corp",
+            "slug": "acme-financial", "legal_name": "Acme Financial Corporation Inc.",
+            "industry": "Financial Services", "org_id": org_id, "now": now,
+        })
 
-        org_eu = Organization(
-            id=ORG_EU_ID,
-            customer_id=CUSTOMER_ID,
-            name="Acme EU",
-            code="ACME-EU",
-            legal_entity_name="Acme Financial GmbH",
-            country="DE",
-            timezone="Europe/Berlin",
-            fiscal_year_end_month=12,
-            default_currency_code="EUR",
-            is_default=False,
-            status="active",
-        )
-        db.add(org_eu)
-        await db.flush()
+        # 2. Organization
+        await session.execute(text("""
+            INSERT INTO organization (id, customer_id, name, code, legal_entity_name, country, timezone, fiscal_year_end_month, default_currency_code, status, is_default, settings_json, created_at, updated_at)
+            VALUES (:id, :cid, :name, :code, :legal, 'USA', 'America/New_York', 12, 'USD', 'active', true, '{}', :now, :now)
+        """), {
+            "id": org_id, "cid": customer_id, "name": "Acme HQ",
+            "code": "ACME-HQ", "legal": "Acme Financial Corporation Inc.", "now": now,
+        })
 
-        # Set default_organization_id on customer
-        customer.default_organization_id = ORG_US_ID
-        print("  ✅ Orgs: Acme US (HQ) + Acme EU")
+        # 3. Roles
+        for rid, rname, rdesc in [
+            (admin_role_id, "Admin", "Full platform access"),
+            (analyst_role_id, "Analyst", "Read/write access to financial data"),
+            (viewer_role_id, "Viewer", "Read-only access"),
+        ]:
+            perms = '{}'
+            if rname == "Admin":
+                perms = '{"admin": true, "users.manage": true, "settings.manage": true, "connections.manage": true}'
+            elif rname == "Analyst":
+                perms = '{"data.read": true, "data.write": true, "reports.create": true}'
+            else:
+                perms = '{"data.read": true}'
+            await session.execute(text("""
+                INSERT INTO role (id, customer_id, name, description, permissions_json, is_system, created_at)
+                VALUES (:id, :cid, :name, :desc, CAST(:perms AS jsonb), true, :now)
+            """), {
+                "id": rid, "cid": customer_id, "name": rname,
+                "desc": rdesc, "perms": perms, "now": now,
+            })
 
-        # ══════════════════════════════════════════════
-        # 3. CURRENCIES
-        # ══════════════════════════════════════════════
-        currencies = [
-            OrganizationCurrency(organization_id=ORG_US_ID, currency_code="USD", is_primary=True, is_reporting=True, status="active"),
-            OrganizationCurrency(organization_id=ORG_US_ID, currency_code="EUR", is_primary=False, is_reporting=False, exchange_rate_source="ecb", status="active"),
-            OrganizationCurrency(organization_id=ORG_EU_ID, currency_code="EUR", is_primary=True, is_reporting=True, status="active"),
-            OrganizationCurrency(organization_id=ORG_EU_ID, currency_code="USD", is_primary=False, is_reporting=False, exchange_rate_source="ecb", status="active"),
-        ]
-        db.add_all(currencies)
-        print("  ✅ Currencies: USD+EUR for US, EUR+USD for EU")
+        # 4. Admin user
+        pw_hash = hash_password("admin123")
+        await session.execute(text("""
+            INSERT INTO platform_user (id, customer_id, email, display_name, password_hash, department, avatar_url, status, is_customer_admin, created_at, updated_at)
+            VALUES (:id, :cid, :email, :name, :pw, :dept, null, 'active', true, :now, :now)
+        """), {
+            "id": admin_user_id, "cid": customer_id,
+            "email": "admin@acmefinancial.com", "name": "Platform Admin",
+            "pw": pw_hash, "dept": "Engineering", "now": now,
+        })
 
-        # ══════════════════════════════════════════════
-        # 4. ROLES
-        # ══════════════════════════════════════════════
-        roles = [
-            Role(
-                id=ROLE_ADMIN_ID,
-                customer_id=CUSTOMER_ID,
-                name="admin",
-                description="Full access to all modules",
-                permissions_json={
-                    "command_center": ["read", "write", "delete"],
-                    "fpa": ["read", "write", "delete"],
-                    "treasury": ["read", "write", "delete"],
-                    "accounting": ["read", "write", "delete"],
-                    "risk": ["read", "write", "delete"],
-                    "monitoring": ["read", "write", "delete"],
-                    "agent_studio": ["read", "write", "delete"],
-                    "admin": ["read", "write", "delete"],
-                },
-                is_system=True,
-            ),
-            Role(
-                id=ROLE_CONTROLLER_ID,
-                customer_id=CUSTOMER_ID,
-                name="controller",
-                description="Financial controller — full accounting + treasury access",
-                permissions_json={
-                    "command_center": ["read"],
-                    "fpa": ["read", "write"],
-                    "treasury": ["read", "write"],
-                    "accounting": ["read", "write", "delete"],
-                    "risk": ["read"],
-                    "monitoring": ["read"],
-                },
-                is_system=True,
-            ),
-            Role(
-                id=ROLE_ANALYST_ID,
-                customer_id=CUSTOMER_ID,
-                name="analyst",
-                description="Financial analyst — read + FP&A write",
-                permissions_json={
-                    "command_center": ["read"],
-                    "fpa": ["read", "write"],
-                    "treasury": ["read"],
-                    "accounting": ["read"],
-                    "risk": ["read"],
-                    "monitoring": ["read"],
-                },
-                is_system=True,
-            ),
-            Role(
-                id=ROLE_VIEWER_ID,
-                customer_id=CUSTOMER_ID,
-                name="viewer",
-                description="Read-only access",
-                permissions_json={
-                    "command_center": ["read"],
-                    "fpa": ["read"],
-                    "treasury": ["read"],
-                },
-                is_system=True,
-            ),
-        ]
-        db.add_all(roles)
-        print("  ✅ Roles: admin, controller, analyst, viewer")
+        # 5. User-Org mapping
+        await session.execute(text("""
+            INSERT INTO user_organization (id, user_id, organization_id, role_id, is_default, status, created_at)
+            VALUES (:id, :uid, :oid, :rid, true, 'active', :now)
+        """), {
+            "id": uuid.uuid4(), "uid": admin_user_id,
+            "oid": org_id, "rid": admin_role_id, "now": now,
+        })
 
-        # ══════════════════════════════════════════════
-        # 5. USERS (matching existing CRUD API users)
-        # ══════════════════════════════════════════════
-        users = [
-            User(
-                id=USER_ADMIN_ID,
-                customer_id=CUSTOMER_ID,
-                email="admin@afda.io",
-                display_name="Aruna Kishore Veleti",
-                password_hash=hash_password("admin123"),
-                is_customer_admin=True,
-                status="active",
-            ),
-            User(
-                id=USER_CFO_ID,
-                customer_id=CUSTOMER_ID,
-                email="cfo@afda.io",
-                display_name="Jane Chen (CFO)",
-                password_hash=hash_password("cfo123"),
-                is_customer_admin=False,
-                status="active",
-            ),
-            User(
-                id=USER_ANALYST_ID,
-                customer_id=CUSTOMER_ID,
-                email="analyst@afda.io",
-                display_name="Alex Kim (Analyst)",
-                password_hash=hash_password("analyst123"),
-                is_customer_admin=False,
-                status="active",
-            ),
-        ]
-        db.add_all(users)
-        print("  ✅ Users: admin@afda.io, cfo@afda.io, analyst@afda.io")
+        await session.commit()
 
-        # ══════════════════════════════════════════════
-        # 6. USER-ORGANIZATION MAPPINGS
-        # ══════════════════════════════════════════════
-        mappings = [
-            # Admin → both orgs
-            UserOrganization(user_id=USER_ADMIN_ID, organization_id=ORG_US_ID, role_id=ROLE_ADMIN_ID, is_default=True, status="active"),
-            UserOrganization(user_id=USER_ADMIN_ID, organization_id=ORG_EU_ID, role_id=ROLE_ADMIN_ID, is_default=False, status="active"),
-            # CFO → US org as controller
-            UserOrganization(user_id=USER_CFO_ID, organization_id=ORG_US_ID, role_id=ROLE_CONTROLLER_ID, is_default=True, status="active"),
-            # Analyst → US org as analyst
-            UserOrganization(user_id=USER_ANALYST_ID, organization_id=ORG_US_ID, role_id=ROLE_ANALYST_ID, is_default=True, status="active"),
-        ]
-        db.add_all(mappings)
-        print("  ✅ User-Org mappings: Admin→US+EU, CFO→US, Analyst→US")
+        print("Seed complete:")
+        print(f"  Customer: Acme Financial Corp ({customer_id})")
+        print(f"  Org:      ACME-HQ ({org_id})")
+        print(f"  Admin:    admin@acmefinancial.com / admin123")
+        print(f"  Roles:    Admin, Analyst, Viewer")
 
-        # ── Commit all ──
-        await db.commit()
-
-    print("\n✅ Platform Service seeding complete!")
-    print(f"\n  Login credentials:")
-    print(f"    admin@afda.io    / admin123    (customer admin, US + EU orgs)")
-    print(f"    cfo@afda.io      / cfo123      (controller, US org)")
-    print(f"    analyst@afda.io  / analyst123   (analyst, US org)")
-    print(f"\n  Organization IDs:")
-    print(f"    US (HQ): {ORG_US_ID}")
-    print(f"    EU:      {ORG_EU_ID}")
-    print(f"\n  Customer ID: {CUSTOMER_ID}")
+    await engine.dispose()
 
 
 if __name__ == "__main__":

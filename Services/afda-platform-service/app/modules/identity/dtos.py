@@ -48,6 +48,7 @@ class UserProfileOut(UserOut):
 class UserCreateRequest(BaseModel):
     email: str
     password: str = Field(min_length=6)
+    department: Optional[str] = None
     display_name: str
     is_customer_admin: bool = False
 
