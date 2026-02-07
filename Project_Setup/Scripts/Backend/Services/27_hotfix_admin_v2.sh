@@ -1,3 +1,14 @@
+#!/bin/bash
+###############################################################################
+# 27_hotfix_admin_v2.sh — Clean rewrite, no special chars, all DTO fields
+###############################################################################
+set -e
+
+ADMIN_SVC="Portals/agentic-finance-director-app/src/app/modules/admin/services/admin.service.ts"
+
+echo "Fixing admin.service.ts..."
+
+cat > "$ADMIN_SVC" << 'TSEOF'
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
@@ -218,3 +229,11 @@ export class AdminService {
     return this.api.put<SettingOut[]>(`${this.config}/settings`, { settings });
   }
 }
+TSEOF
+
+echo "Done. Fixed:"
+echo "  - Removed arrow chars that broke TypeScript parser"
+echo "  - Added ApiKeyOut.is_active field"
+echo "  - Added ApiKeyCreatedOut.key field"
+echo "  - Added DataConnectionOut.last_error field"
+echo "  - Changed ConnectionTestResult.latency_ms to number|null"

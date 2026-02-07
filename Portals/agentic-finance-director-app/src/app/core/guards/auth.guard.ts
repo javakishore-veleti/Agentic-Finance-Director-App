@@ -2,7 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = (route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
@@ -10,45 +10,50 @@ export const authGuard: CanActivateFn = () => {
     return true;
   }
 
-  // Try refresh if token is expired but refresh token exists
+  // Try refresh if token expired but refresh token exists
   if (auth.getRefreshToken() && auth.isTokenExpired()) {
-    // Let the interceptor handle refresh on next API call
-    // For now, redirect to login
+    auth.refreshToken().subscribe({
+      next: (res) => {
+        if (res?.data) {
+          router.navigate([state.url]);
+        } else {
+          router.navigate(['/login']);
+        }
+      },
+      error: () => router.navigate(['/login']),
+    });
+    return false;
   }
 
-  router.navigate(['/login'], {
-    queryParams: { returnUrl: router.url },
-  });
+  router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
   return false;
 };
 
-// Role-based guard factory
-export const roleGuard = (...allowedRoles: string[]): CanActivateFn => {
-  return () => {
-    const auth = inject(AuthService);
-    const router = inject(Router);
-
-    if (!auth.isAuthenticated()) {
-      router.navigate(['/login']);
-      return false;
-    }
-
-    if (auth.hasRole(...allowedRoles)) {
-      return true;
-    }
-
-    // Redirect to dashboard if authenticated but wrong role
-    router.navigate(['/']);
-    return false;
-  };
-};
-
-// Guest guard (for login/signup — redirect if already logged in)
+/**
+ * Guest guard — only allows unauthenticated users (login/signup pages).
+ * Redirects to home if already logged in.
+ */
 export const guestGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
   if (auth.isAuthenticated() && !auth.isTokenExpired()) {
+    router.navigate(['/']);
+    return false;
+  }
+  return true;
+};
+
+export const adminGuard: CanActivateFn = (route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (!auth.isAuthenticated()) {
+    router.navigate(['/login']);
+    return false;
+  }
+
+  if (!auth.isCustomerAdmin()) {
     router.navigate(['/']);
     return false;
   }

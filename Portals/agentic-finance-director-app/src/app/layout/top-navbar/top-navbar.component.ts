@@ -66,7 +66,7 @@ export class TopNavbarComponent {
   userInitials(): string {
     const name = this.auth.user()?.full_name;
     if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   }
 
   onLogout() {

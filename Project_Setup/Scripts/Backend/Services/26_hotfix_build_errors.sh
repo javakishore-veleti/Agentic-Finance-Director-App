@@ -1,3 +1,185 @@
+#!/bin/bash
+###############################################################################
+# 26_hotfix_build_errors.sh
+# Fixes 4 build errors after Script 26:
+#   1. guestGuard missing export
+#   2. UserProfile.full_name → display_name (backward compat)
+#   3. UserProfile.role removed (backward compat)
+#   4. Implicit 'any' parameter type
+# Run from: git repo root
+###############################################################################
+set -e
+
+SRC="Portals/agentic-finance-director-app/src/app"
+
+echo "🔧 [26-hotfix] Fixing Angular build errors..."
+
+# ═══════════════════════════════════════════════════════════════
+# FIX 1: Add guestGuard to auth.guard.ts
+# ═══════════════════════════════════════════════════════════════
+GUARD="$SRC/core/guards/auth.guard.ts"
+
+cat > "$GUARD" << 'EOF'
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
+
+export const authGuard: CanActivateFn = (route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.isAuthenticated() && !auth.isTokenExpired()) {
+    return true;
+  }
+
+  // Try refresh if token expired but refresh token exists
+  if (auth.getRefreshToken() && auth.isTokenExpired()) {
+    auth.refreshToken().subscribe({
+      next: (res) => {
+        if (res?.data) {
+          router.navigate([state.url]);
+        } else {
+          router.navigate(['/login']);
+        }
+      },
+      error: () => router.navigate(['/login']),
+    });
+    return false;
+  }
+
+  router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
+  return false;
+};
+
+/**
+ * Guest guard — only allows unauthenticated users (login/signup pages).
+ * Redirects to home if already logged in.
+ */
+export const guestGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.isAuthenticated() && !auth.isTokenExpired()) {
+    router.navigate(['/']);
+    return false;
+  }
+  return true;
+};
+
+export const adminGuard: CanActivateFn = (route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (!auth.isAuthenticated()) {
+    router.navigate(['/login']);
+    return false;
+  }
+
+  if (!auth.isCustomerAdmin()) {
+    router.navigate(['/']);
+    return false;
+  }
+
+  return true;
+};
+EOF
+
+echo "  ✅ auth.guard.ts — added guestGuard export"
+
+# ═══════════════════════════════════════════════════════════════
+# FIX 2: Add backward-compat fields to UserProfile
+# ═══════════════════════════════════════════════════════════════
+MODEL="$SRC/core/models/auth.model.ts"
+
+cat > "$MODEL" << 'EOF'
+// ── Auth Request/Response ──
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface SignupRequest {
+  email: string;
+  password: string;
+  display_name: string;
+  company_name?: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface RefreshRequest {
+  refresh_token: string;
+}
+
+// ── Organization ──
+
+export interface UserOrganization {
+  id: string;
+  name: string;
+  code: string;
+  role: string;
+  is_default: boolean;
+}
+
+// ── User Profile (from /auth/me) ──
+
+export interface UserProfile {
+  id: string;
+  customer_id: string;
+  email: string;
+  display_name: string;
+  avatar_url: string | null;
+  status: string;
+  is_customer_admin: boolean;
+  last_login_at: string | null;
+  created_at: string | null;
+  organizations: UserOrganization[];
+
+  // Backward-compat aliases (auto-populated by AuthService)
+  full_name?: string;
+  role?: string;
+  department?: string | null;
+}
+
+// ── JWT Payload (decoded from token) ──
+
+export interface JwtPayload {
+  sub: string;
+  customer_id: string;
+  email: string;
+  display_name: string;
+  is_customer_admin: boolean;
+  organizations: UserOrganization[];
+  exp: number;
+  iat: number;
+  type: string;
+}
+
+// ── API Response Wrapper ──
+
+export interface ApiResponse<T = any> {
+  status: string;
+  data: T;
+  message?: string;
+  meta?: Record<string, any>;
+  success?: boolean;
+}
+EOF
+
+echo "  ✅ auth.model.ts — added full_name, role, department compat fields"
+
+# ═══════════════════════════════════════════════════════════════
+# FIX 3: Update AuthService to populate compat aliases
+# ═══════════════════════════════════════════════════════════════
+AUTH_SVC="$SRC/core/services/auth.service.ts"
+
+cat > "$AUTH_SVC" << 'EOF'
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -234,3 +416,31 @@ export class AuthService {
     }
   }
 }
+EOF
+
+echo "  ✅ auth.service.ts — compat aliases (full_name, role) auto-populated"
+
+# ═══════════════════════════════════════════════════════════════
+# FIX 4: Patch top-navbar implicit any (n => n[0])
+# ═══════════════════════════════════════════════════════════════
+NAVBAR_FILE="$SRC/layout/top-navbar/top-navbar.component.ts"
+if [ -f "$NAVBAR_FILE" ]; then
+    # Fix implicit any: .map(n => ...) → .map((n: string) => ...)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' 's/\.map(n =>/\.map((n: string) =>/g' "$NAVBAR_FILE"
+    else
+        sed -i 's/\.map(n =>/\.map((n: string) =>/g' "$NAVBAR_FILE"
+    fi
+    echo "  ✅ top-navbar.component.ts — fixed implicit 'any' type on .map()"
+else
+    echo "  ⏭️  top-navbar not found at expected path — may need manual fix"
+fi
+
+echo ""
+echo "✅ All 4 build errors fixed. Angular should rebuild automatically."
+echo ""
+echo "  Fixes applied:"
+echo "    1. guestGuard — restored export in auth.guard.ts"
+echo "    2. full_name  — added as optional compat alias on UserProfile"
+echo "    3. role       — added as optional compat alias on UserProfile"
+echo "    4. implicit any — typed .map((n: string) =>) in top-navbar"
