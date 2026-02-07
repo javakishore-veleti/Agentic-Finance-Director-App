@@ -33,6 +33,7 @@ def upgrade() -> None:
         sa.Column('status', sa.String(20), server_default='active'),
         sa.Column('default_organization_id', UUID(as_uuid=True), nullable=True),
         sa.Column('config_json', JSONB, server_default='{}'),
+        sa.Column('updated_by', UUID(as_uuid=True), sa.ForeignKey('platform_user.id'), nullable=True),
         sa.Column('created_at', sa.DateTime, server_default=sa.text('now()')),
         sa.Column('updated_at', sa.DateTime, server_default=sa.text('now()')),
     )
